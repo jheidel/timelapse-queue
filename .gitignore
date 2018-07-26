@@ -1,0 +1,3 @@
+# Ignore generated binary data
+bindata.go
+timelapse-queue
