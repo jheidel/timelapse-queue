@@ -18,6 +18,7 @@ import (
 
 var (
 	port = flag.Int("port", 8080, "Port to host web frontend.")
+	root = flag.String("root", "/home/jeff", "Filesystem root.")
 )
 
 func main() {
@@ -32,7 +33,6 @@ func main() {
 	ffmpegp, err := util.LocateFFmpeg()
 	if err != nil {
 		log.Errorf("Unable to locate ffmpeg binary: %v", err)
-		fmt.Println("FFmpeg is required for saving video files.")
 		fmt.Println("Either ensure the ffmpeg binary is in $PATH,")
 		fmt.Println("or set the FFMPEG environment variable.")
 		os.Exit(1)
@@ -45,7 +45,7 @@ func main() {
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
 	fb := &filebrowse.FileBrowser{
-		Root: "/home/jeff/",
+		Root: *root,
 	}
 
 	go func() {
@@ -59,11 +59,6 @@ func main() {
 		log.Infof("HTTP server exited with status %v", err)
 	}()
 
-	for {
-		select {
-		case sig := <-sigs:
-			log.Warningf("Caught signal %v", sig)
-			return
-		}
-	}
+	sig := <-sigs
+	log.Warningf("Caught signal %v", sig)
 }

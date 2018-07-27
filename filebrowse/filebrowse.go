@@ -7,7 +7,15 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strconv"
 	"strings"
+)
+
+var (
+	timelapseRE = regexp.MustCompile(`^([^\d]*)(\d+)\.(\w+)$`)
+
+	allowedEXT = []string{"jpg", "png"}
 )
 
 type FileBrowser struct {
@@ -21,6 +29,21 @@ type Directory struct {
 }
 
 type Timelapse struct {
+	// The base name of the first image in the sequence.
+	Name string
+	// The path to the first image in the sequence, relative to the file browser root.
+	Path string
+
+	// The text component preceding the numbers.
+	Prefix string
+	// The file extension component.
+	Ext string
+	// NumLen is the string length of the number component.
+	NumLen int
+	// Count is the number of images in the sequence.
+	Count int
+	// Start is the index of the first timelapse.
+	Start int
 }
 
 type Response struct {
@@ -49,7 +72,9 @@ func (f *FileBrowser) listPath(p string) (*Response, error) {
 
 	r := &Response{}
 
-	// Generate list of directories
+	tmap := make(map[string]*Timelapse)
+
+	// Generate list of directories and timelapse files.
 	for _, finfo := range files {
 		rel, err := filepath.Rel(root, filepath.Join(b, finfo.Name()))
 		if err != nil {
@@ -61,7 +86,55 @@ func (f *FileBrowser) listPath(p string) (*Response, error) {
 				Path: rel,
 			}
 			r.Dirs = append(r.Dirs, d)
+			continue
 		}
+		ms := timelapseRE.FindStringSubmatch(finfo.Name())
+		if ms == nil || len(ms) != 4 {
+			continue
+		}
+		prefix := ms[1]
+		numStr := ms[2]
+		ext := ms[3]
+
+		var matchEXT bool
+		for _, valid := range allowedEXT {
+			if strings.ToLower(ext) == valid {
+				matchEXT = true
+			}
+		}
+		if !matchEXT {
+			continue
+		}
+
+		num, err := strconv.Atoi(numStr)
+		if err != nil {
+			return nil, err
+		}
+
+		var t *Timelapse
+		if lookup, ok := tmap[prefix]; ok {
+			t = lookup
+		} else {
+			t = &Timelapse{
+				Name:   finfo.Name(),
+				Path:   rel,
+				Prefix: prefix,
+				Ext:    ext,
+				Start:  num,
+				NumLen: len(numStr),
+			}
+			tmap[prefix] = t
+		}
+
+		// Increment counter if this is the next image in the sequence.
+		if num == t.Start+t.Count {
+			t.Count += 1
+		}
+	}
+
+	// Extract timelapse map to list.
+	for _, v := range tmap {
+		r.Timelapses = append(r.Timelapses, v)
 	}
 
 	// Generates list of parents
