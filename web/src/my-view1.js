@@ -10,6 +10,8 @@
 
 import { PolymerElement, html } from '@polymer/polymer/polymer-element.js';
 import './shared-styles.js';
+import '@polymer/iron-ajax/iron-ajax.js';
+import '@polymer/paper-button/paper-button.js';
 
 class MyView1 extends PolymerElement {
   static get template() {
@@ -20,16 +22,79 @@ class MyView1 extends PolymerElement {
 
           padding: 10px;
         }
+        .files {
+          display: flex;
+          flex-wrap: wrap;
+        }
+        .parents {
+          color: red;
+        }
+        .dirs {
+          color: green;
+        }
+        .timelapses {
+          color: blue;
+        }
       </style>
+
+      <iron-ajax
+          auto
+          url="/filebrowser"
+          params="[[_buildParams(path)]]"
+          handle-as="json"
+          last-response="{{response}}"
+          ></iron-ajax>
 
       <div class="card">
         <div class="circle">1</div>
-        <h1>View One</h1>
-        <p>Ut labores minimum atomorum pro. Laudem tibique ut has.</p>
-        <p>Lorem ipsum dolor sit amet, per in nusquam nominavi periculis, sit elit oportere ea.Lorem ipsum dolor sit amet, per in nusquam nominavi periculis, sit elit oportere ea.Cu mei vide viris gloriatur, at populo eripuit sit.</p>
+        <h1>Select a timelapse</h1>
+        <div class="files parents">
+          <template is="dom-repeat" items="[[response.Parents]]">
+          <div>
+           <paper-button on-tap="_onDir">[[item.Name]]</paper-button>
+          </div>
+          </template>
+        </div>
+        <hr>
+        <div class="files dirs">
+          <template is="dom-repeat" items="[[response.Dirs]]">
+          <div>
+           <paper-button on-tap="_onDir">[[item.Name]]</paper-button>
+          </div>
+          </template>
+        </div>
+        <hr>
+        <div class="files timelapses">
+          <template is="dom-repeat" items="[[response.Timelapses]]">
+          <div>
+           <paper-button>[[item.Name]]</paper-button>
+          </div>
+          </template>
+        </div>
       </div>
     `;
   }
+
+  _onDir(e) {
+          this.path = e.model.item.Path;
+  }
+
+  _buildParams(path) {
+      return {'path': path};
+  }
+
+  static get properties() {
+    return {
+      path: {
+        type: String,
+        value: '',
+      },
+      response: {
+        type: Object,
+      },
+    };
+  }
+
 }
 
 window.customElements.define('my-view1', MyView1);
