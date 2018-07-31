@@ -22,15 +22,17 @@ fi
 (cd web && polymer build --js-minify --css-minify --html-minify)
 
 # Generate bindata.go file from polymer output
-if ! [ -x "$(command -v polymer)" ]; then
-  echo "Missing go-bindata. On ubuntu: sudo apt-get install go-bindata"
+if ! [ -x "$(command -v go-bindata)" ]; then
+  echo "Missing go-bindata."
+  echo "On ubuntu: sudo apt-get install go-bindata"
   exit 1
 fi
 go-bindata web/build/default/...
 
 # Build standalone binary with resources embedded
-if ! [ -x "$(command -v polymer)" ]; then
+if ! [ -x "$(command -v go)" ]; then
   echo "Missing go. https://golang.org/doc/install"
+  echo "On ubuntu: sudo apt-get install golang-go"
   exit 1
 fi
 go build
