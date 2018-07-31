@@ -54,6 +54,21 @@ type Response struct {
 	Timelapses []*Timelapse
 }
 
+func (f *FileBrowser) GetFullPath(p string) (string, error) {
+	root, err := filepath.EvalSymlinks(f.Root)
+	if err != nil {
+		return "", err
+	}
+	b, err := filepath.EvalSymlinks(filepath.Join(root, p))
+	if err != nil {
+		return "", err
+	}
+	if !strings.HasPrefix(b, root) {
+		return "", errors.New("permission denied, not in root")
+	}
+	return b, nil
+}
+
 func (f *FileBrowser) GetTimelapse(p string) (*Timelapse, error) {
 	dir, name := path.Split(p)
 

@@ -48,9 +48,12 @@ func main() {
 		Root: *root,
 	}
 
+	ih := filebrowse.NewImageHost(fb)
+
 	go func() {
 		log.Infof("Hosting web frontend on port %d", *port)
 		http.Handle("/filebrowser", fb)
+		http.Handle("/image", ih)
 		http.Handle("/",
 			http.FileServer(
 				&assetfs.AssetFS{Asset: Asset, AssetDir: AssetDir, AssetInfo: AssetInfo, Prefix: "web/build/default"}))
