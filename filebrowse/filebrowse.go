@@ -3,9 +3,11 @@ package filebrowse
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -50,6 +52,22 @@ type Response struct {
 	Parents    []*Directory
 	Dirs       []*Directory
 	Timelapses []*Timelapse
+}
+
+func (f *FileBrowser) GetTimelapse(p string) (*Timelapse, error) {
+	dir, name := path.Split(p)
+
+	contents, err := f.listPath(dir)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, t := range contents.Timelapses {
+		if t.Name == name {
+			return t, nil
+		}
+	}
+	return nil, fmt.Errorf("timelapse %v not found in %v", name, dir)
 }
 
 func (f *FileBrowser) listPath(p string) (*Response, error) {
