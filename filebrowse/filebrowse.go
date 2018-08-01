@@ -12,6 +12,15 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
+
+	cache "github.com/patrickmn/go-cache"
+	log "github.com/sirupsen/logrus"
+)
+
+const (
+	// FilesystemCacheDuration controls the maximum allowed staleness of filesystem entries.
+	FilesystemCacheDuration = 15 * time.Second
 )
 
 var (
@@ -23,6 +32,17 @@ var (
 type FileBrowser struct {
 	// Root is the base of the file system to serve up
 	Root string
+
+	// listCache is the cache used for (possibly expensive) file list operations
+	listCache *cache.Cache
+}
+
+func NewFileBrowser(root string) *FileBrowser {
+	c := cache.New(FilesystemCacheDuration, 5*time.Minute)
+	return &FileBrowser{
+		Root:      root,
+		listCache: c,
+	}
 }
 
 type Directory struct {
@@ -46,6 +66,9 @@ type Timelapse struct {
 	Count int
 	// Start is the index of the first timelapse.
 	Start int
+
+	// DurationString is the length of the timelapse as a human readable string.
+	DurationString string
 }
 
 type Response struct {
@@ -98,9 +121,19 @@ func (f *FileBrowser) listPath(p string) (*Response, error) {
 		return nil, errors.New("permission denied, not in root")
 	}
 
-	files, err := ioutil.ReadDir(b)
-	if err != nil {
-		return nil, err
+	var files []os.FileInfo
+	if v, found := f.listCache.Get(b); found {
+		files = v.([]os.FileInfo)
+	} else {
+		start := time.Now()
+		v, err := ioutil.ReadDir(b)
+		if err != nil {
+			return nil, err
+		}
+		elapsed := time.Now().Sub(start).Truncate(time.Millisecond)
+		log.Infof("Read of %v returned %d entries in %v", b, len(v), elapsed)
+		f.listCache.Set(b, v, cache.DefaultExpiration)
+		files = v
 	}
 
 	r := &Response{}
@@ -167,6 +200,10 @@ func (f *FileBrowser) listPath(p string) (*Response, error) {
 
 	// Extract timelapse map to list.
 	for _, v := range tmap {
+		fps := 60
+		dur := time.Second * time.Duration(v.Count) / time.Duration(fps)
+		v.DurationString = dur.Truncate(100 * time.Millisecond).String()
+
 		r.Timelapses = append(r.Timelapses, v)
 	}
 

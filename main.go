@@ -44,10 +44,7 @@ func main() {
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
-	fb := &filebrowse.FileBrowser{
-		Root: *root,
-	}
-
+	fb := filebrowse.NewFileBrowser(*root)
 	ih := filebrowse.NewImageHost(fb)
 
 	go func() {
