@@ -9,6 +9,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"timelapse-queue/engine"
 	"timelapse-queue/filebrowse"
 	"timelapse-queue/util"
 
@@ -47,10 +48,13 @@ func main() {
 	fb := filebrowse.NewFileBrowser(*root)
 	ih := filebrowse.NewImageHost(fb)
 
+	engine := &engine.TestServer{}
+
 	go func() {
 		log.Infof("Hosting web frontend on port %d", *port)
 		http.Handle("/filebrowser", fb)
 		http.Handle("/image", ih)
+		http.Handle("/convert", engine)
 		http.Handle("/",
 			http.FileServer(
 				&assetfs.AssetFS{Asset: Asset, AssetDir: AssetDir, AssetInfo: AssetInfo, Prefix: "web/build/default"}))
