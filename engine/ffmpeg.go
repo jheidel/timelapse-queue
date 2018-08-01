@@ -3,6 +3,7 @@ package engine
 import (
 	"bufio"
 	"net/http"
+	"os"
 	"os/exec"
 	"regexp"
 	"strconv"
@@ -32,6 +33,22 @@ func Convert() error {
 	}
 	cmd := exec.Command(util.LocateFFmpegOrDie(), args...)
 
+	logf, err := os.Create("/home/jeff/timelapse/1080p-test.mp4.log")
+	if err != nil {
+		return err
+	}
+	defer logf.Close()
+
+	customFormatter := new(log.TextFormatter)
+	customFormatter.TimestampFormat = "2006-01-02 15:04:05"
+	customFormatter.FullTimestamp = true
+
+	logger := &log.Logger{
+		Out:       logf,
+		Formatter: customFormatter,
+		Level:     log.DebugLevel,
+	}
+
 	r, err := cmd.StderrPipe()
 	if err != nil {
 		return err
@@ -41,7 +58,7 @@ func Convert() error {
 	go func() {
 		for stderr.Scan() {
 			l := stderr.Text()
-			log.Infof("STDERR: %v", l)
+			logger.Error(l)
 
 			m := progressRE.FindStringSubmatch(l)
 			if len(m) != 2 {
@@ -57,9 +74,22 @@ func Convert() error {
 		}
 	}()
 
+	r, err = cmd.StdoutPipe()
+	if err != nil {
+		return err
+	}
+	stdout := bufio.NewScanner(r)
+	go func() {
+		for stdout.Scan() {
+			logger.Info(stdout.Text())
+		}
+	}()
+
 	if err := cmd.Run(); err != nil {
 		return err
 	}
+
+	log.Infof("Successful convert.")
 
 	return nil
 }

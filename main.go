@@ -61,6 +61,7 @@ func main() {
 
 		err := http.ListenAndServe(fmt.Sprintf(":%d", *port), nil)
 		log.Infof("HTTP server exited with status %v", err)
+		os.Exit(1)
 	}()
 
 	sig := <-sigs
