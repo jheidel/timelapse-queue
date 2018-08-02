@@ -2,12 +2,13 @@ package engine
 
 import (
 	"bufio"
-	"net/http"
+	"context"
 	"os"
 	"os/exec"
 	"regexp"
 	"strconv"
 
+	"timelapse-queue/filebrowse"
 	"timelapse-queue/util"
 
 	log "github.com/sirupsen/logrus"
@@ -17,22 +18,13 @@ var (
 	progressRE = regexp.MustCompile(`frame=\s*(\d+)`)
 )
 
-type FFmpegConfig struct {
-}
+func Convert(ctx context.Context, config Config, timelapse *filebrowse.Timelapse, progress chan<- int) error {
+	defer close(progress)
 
-func Convert() error {
-	args := []string{
-		"-r", "60",
-		"-start_number", "21015",
-		"-i", "/home/jeff/timelapse/G%07d.JPG",
-		"-c:v", "libx264",
-		"-preset", "slow",
-		"-crf", "17",
-		"-s", "1920x1080",
-		"/home/jeff/timelapse/1080p-test.mp4",
-	}
+	args := config.GetArgs(timelapse)
 	cmd := exec.Command(util.LocateFFmpegOrDie(), args...)
 
+	// TODO
 	logf, err := os.Create("/home/jeff/timelapse/1080p-test.mp4.log")
 	if err != nil {
 		return err
@@ -69,8 +61,7 @@ func Convert() error {
 				log.Errorf("Failed to convert frame number %s to int", m[1])
 				continue
 			}
-
-			log.Infof("Currently on frame %d", i)
+			progress <- i
 		}
 	}()
 
@@ -85,25 +76,33 @@ func Convert() error {
 		}
 	}()
 
-	if err := cmd.Run(); err != nil {
+	if err := cmd.Start(); err != nil {
+		log.Errorf("Failed to start FFmpeg subprocess")
 		return err
 	}
 
-	log.Infof("Successful convert.")
+	errc := make(chan error)
+	go func() {
+		errc <- cmd.Wait()
+	}()
 
-	return nil
-}
+	donec := ctx.Done()
 
-type TestServer struct {
-}
-
-func (s *TestServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	err := Convert()
-	if err != nil {
-		log.Errorf("Convert returned error: %v", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+	for {
+		select {
+		case err := <-errc:
+			if err != nil {
+				return err
+			}
+			return nil
+		case <-donec:
+			donec = nil
+			log.Warnf("Context cancel (%v), aborting FFmpeg", ctx.Err())
+			logger.Warnf("Context cancel (%v), aborting FFmpeg", ctx.Err())
+			if err := cmd.Process.Signal(os.Interrupt); err != nil {
+				log.Infof("Failed to signal FFmpeg for context cancel: %v", err)
+				return err
+			}
+		}
 	}
-
-	w.Write([]byte("done"))
 }
