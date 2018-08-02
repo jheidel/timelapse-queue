@@ -1,6 +1,8 @@
 package engine
 
 import (
+	"fmt"
+
 	"timelapse-queue/filebrowse"
 )
 
@@ -14,12 +16,12 @@ type configFake struct {
 func (f *configFake) GetArgs(t *filebrowse.Timelapse) []string {
 	return []string{
 		"-r", "60",
-		"-start_number", "21015",
-		"-i", "/home/jeff/timelapse/G%07d.JPG",
+		"-start_number", fmt.Sprintf("%d", t.Start),
+		"-i", t.GetFFmpegInputPath(),
 		"-c:v", "libx264",
 		"-preset", "slow",
 		"-crf", "17",
 		"-s", "1920x1080",
-		"/home/jeff/timelapse/1080p-test.mp4",
+		t.GetOutputPath("1080p-test.mp4"),
 	}
 }

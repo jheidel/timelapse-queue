@@ -48,7 +48,7 @@ func main() {
 	fb := filebrowse.NewFileBrowser(*root)
 	ih := filebrowse.NewImageHost(fb)
 
-	engine := &engine.TestServer{}
+	engine := &engine.TestServer{Browser: fb}
 
 	go func() {
 		log.Infof("Hosting web frontend on port %d", *port)

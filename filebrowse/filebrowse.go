@@ -49,28 +49,6 @@ type Directory struct {
 	Name string
 	Path string
 }
-
-type Timelapse struct {
-	// The base name of the first image in the sequence.
-	Name string
-	// The path to the first image in the sequence, relative to the file browser root.
-	Path string
-
-	// The text component preceding the numbers.
-	Prefix string
-	// The file extension component.
-	Ext string
-	// NumLen is the string length of the number component.
-	NumLen int
-	// Count is the number of images in the sequence.
-	Count int
-	// Start is the index of the first timelapse.
-	Start int
-
-	// DurationString is the length of the timelapse as a human readable string.
-	DurationString string
-}
-
 type Response struct {
 	Parents    []*Directory
 	Dirs       []*Directory
@@ -182,12 +160,13 @@ func (f *FileBrowser) listPath(p string) (*Response, error) {
 			t = lookup
 		} else {
 			t = &Timelapse{
-				Name:   finfo.Name(),
-				Path:   rel,
-				Prefix: prefix,
-				Ext:    ext,
-				Start:  num,
-				NumLen: len(numStr),
+				Name:           finfo.Name(),
+				Path:           rel,
+				parentFullPath: b,
+				Prefix:         prefix,
+				Ext:            ext,
+				Start:          num,
+				NumLen:         len(numStr),
 			}
 			tmap[prefix] = t
 		}

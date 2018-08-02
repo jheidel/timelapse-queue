@@ -67,12 +67,15 @@ class MyView1 extends PolymerElement {
         <div class="files timelapses">
           <template is="dom-repeat" items="[[response.Timelapses]]">
           <div>
-           <paper-button>[[item.Name]]</paper-button>
              <div>
               <a href="/image?path=[[item.Path]]" target="_blank">
                <img src="/image?path=[[item.Path]]&thumb=true" alt="[[item.Name]]">
               </a>
              </div>
+             <div><span>[[item.Count]]</span> images (<span>[[item.DurationString]]</span>)</div>
+             <a href="/convert?path=[[item.Path]]" target="_blank">
+              <paper-button>[[item.Name]]</paper-button>
+             </a>
           </div>
           </template>
         </div>
