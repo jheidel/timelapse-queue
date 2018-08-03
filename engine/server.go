@@ -1,17 +1,14 @@
 package engine
 
 import (
-	"context"
 	"net/http"
-	"time"
 
 	"timelapse-queue/filebrowse"
-
-	log "github.com/sirupsen/logrus"
 )
 
 type TestServer struct {
 	Browser *filebrowse.FileBrowser
+	Queue   *JobQueue
 }
 
 func (s *TestServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -29,25 +26,6 @@ func (s *TestServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	config := &configFake{}
 
-	pc := make(chan int)
-	go func() {
-		for p := range pc {
-			log.Infof("Chan progress %d", p)
-		}
-
-		log.Infof("Chan exit.")
-	}()
-
-	ctx, cancel := context.WithTimeout(r.Context(), 15*time.Minute)
-	defer cancel()
-
-	err = Convert(ctx, config, t, pc)
-	if err != nil {
-		log.Errorf("Convert returned error: %v", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	log.Infof("Conversion succeeded.")
+	s.Queue.AddJob(config, t)
 	w.Write([]byte("done"))
 }

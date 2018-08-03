@@ -8,6 +8,7 @@ import (
 
 type Config interface {
 	GetArgs(timelapse *filebrowse.Timelapse) []string
+	GetDebugPath(timelapse *filebrowse.Timelapse) string
 }
 
 type configFake struct {
@@ -24,4 +25,8 @@ func (f *configFake) GetArgs(t *filebrowse.Timelapse) []string {
 		"-s", "1920x1080",
 		t.GetOutputPath("1080p-test.mp4"),
 	}
+}
+
+func (f *configFake) GetDebugPath(t *filebrowse.Timelapse) string {
+	return t.GetOutputPath("1080p-test.mp4.log")
 }

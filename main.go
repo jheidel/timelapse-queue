@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"net/http"
@@ -48,13 +49,20 @@ func main() {
 	fb := filebrowse.NewFileBrowser(*root)
 	ih := filebrowse.NewImageHost(fb)
 
-	engine := &engine.TestServer{Browser: fb}
+	jq := engine.NewJobQueue()
+	go jq.Loop(context.Background())
+
+	engine := &engine.TestServer{
+		Browser: fb,
+		Queue:   jq,
+	}
 
 	go func() {
 		log.Infof("Hosting web frontend on port %d", *port)
 		http.Handle("/filebrowser", fb)
 		http.Handle("/image", ih)
 		http.Handle("/convert", engine)
+		http.Handle("/queue", jq)
 		http.Handle("/",
 			http.FileServer(
 				&assetfs.AssetFS{Asset: Asset, AssetDir: AssetDir, AssetInfo: AssetInfo, Prefix: "web/build/default"}))

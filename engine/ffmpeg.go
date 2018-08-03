@@ -24,8 +24,7 @@ func Convert(ctx context.Context, config Config, timelapse *filebrowse.Timelapse
 	args := config.GetArgs(timelapse)
 	cmd := exec.Command(util.LocateFFmpegOrDie(), args...)
 
-	// TODO
-	logf, err := os.Create("/home/jeff/timelapse/1080p-test.mp4.log")
+	logf, err := os.Create(config.GetDebugPath(timelapse))
 	if err != nil {
 		return err
 	}
@@ -61,7 +60,7 @@ func Convert(ctx context.Context, config Config, timelapse *filebrowse.Timelapse
 				log.Errorf("Failed to convert frame number %s to int", m[1])
 				continue
 			}
-			progress <- i
+			progress <- 100 * i / timelapse.Count
 		}
 	}()
 
@@ -92,8 +91,10 @@ func Convert(ctx context.Context, config Config, timelapse *filebrowse.Timelapse
 		select {
 		case err := <-errc:
 			if err != nil {
+				log.Warnf("Conversion failed: %v.", err)
 				return err
 			}
+			log.Info("Conversion succeeded.")
 			return nil
 		case <-donec:
 			donec = nil
