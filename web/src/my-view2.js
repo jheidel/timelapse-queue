@@ -60,12 +60,19 @@ class MyView2 extends PolymerElement {
               <div>
                <img src="/image?path=[[item.Timelapse.Path]]&thumb=true">
               </div>
-              <div>[[item.Timelapse.Name]]</div>
+              <div>
+                  <div>[[item.Timelapse.Name]]</div>
+                  <div>[[item.Timelapse.Count]] images</div>
+                  <div>[[item.Timelapse.DurationString]]</div>
+              </div>
               <div>
                   <paper-progress value="[[item.Progress]]"></paper-progress>
               </div>
               <div>[[item.Progress]]%</div>
-              <div>[[item.State]]</div>
+              <div>
+                  <div>[[item.State]]</div>
+                  <div hidden$="[[!item.ElapsedString]]">[[item.ElapsedString]]</div>
+              </div>
               <div hidden$="[[!item.LogPath]]">
                 <a href="/log?path=[[item.LogPath]]" target="_blank">Log</a>
               </div>

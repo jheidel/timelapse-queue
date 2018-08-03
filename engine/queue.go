@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"timelapse-queue/filebrowse"
 
@@ -26,6 +27,11 @@ type Job struct {
 	Progress  int
 	Timelapse *filebrowse.Timelapse
 	Config    Config
+
+	// Elapsed time, derived from start time. Updated as part of JSON serialization.
+	ElapsedString string
+	start         time.Time
+	stop          time.Time
 }
 
 type JobQueue struct {
@@ -72,6 +78,7 @@ func (q *JobQueue) maybeStartNext(ctx context.Context) {
 	q.current = j
 	j.State = StateActive
 	j.LogPath = j.Config.GetDebugPath(j.Timelapse)
+	j.start = time.Now()
 	go func() {
 		defer close(q.jobdonec)
 		q.jobdonec <- Convert(ctx, j.Config, j.Timelapse, q.jobprogressc)
@@ -81,6 +88,7 @@ func (q *JobQueue) maybeStartNext(ctx context.Context) {
 
 func (q *JobQueue) markJobDone(err error) {
 	j := q.current
+	j.stop = time.Now()
 	if err != nil {
 		j.State = StateFailed
 		j.Progress = 0
@@ -107,6 +115,25 @@ func (q *JobQueue) AddJob(config Config, t *filebrowse.Timelapse) {
 	q.addc <- j
 }
 
+func (q *JobQueue) toJSON() *jsonResp {
+	now := time.Now()
+	for _, j := range q.Queue {
+		end := now
+		if !j.stop.IsZero() {
+			end = j.stop
+		}
+		if !j.start.IsZero() {
+			j.ElapsedString = end.Sub(j.start).Truncate(time.Second).String()
+		}
+	}
+
+	r, err := json.Marshal(q)
+	return &jsonResp{
+		Result: r,
+		Err:    err,
+	}
+}
+
 func (q *JobQueue) Loop(ctx context.Context) {
 	exitc := ctx.Done()
 	log.Info("starting job queue")
@@ -123,12 +150,7 @@ func (q *JobQueue) Loop(ctx context.Context) {
 		case p := <-q.jobprogressc:
 			q.current.Progress = p
 		case c := <-q.serialc:
-			r, err := json.Marshal(q)
-			resp := &jsonResp{
-				Result: r,
-				Err:    err,
-			}
-			c <- resp
+			c <- q.toJSON()
 		case <-exitc:
 			log.Info("job queue stopping")
 			return

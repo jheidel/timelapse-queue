@@ -17,7 +17,8 @@ type configFake struct {
 
 func (f *configFake) GetArgs(t *filebrowse.Timelapse) []string {
 	return []string{
-		"-r", "60",
+		//"-r", "60",  // using might be causing the "Past duration 0.999992 too large" errors?
+		"-framerate", "60",
 		"-start_number", fmt.Sprintf("%d", t.Start),
 		"-i", t.GetFFmpegInputPath(),
 		"-c:v", "libx264",
