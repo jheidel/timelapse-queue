@@ -10,6 +10,7 @@
 
 import { PolymerElement, html } from '@polymer/polymer/polymer-element.js';
 import './shared-styles.js';
+import '@polymer/paper-progress/paper-progress.js';
 
 class MyView2 extends PolymerElement {
   static get template() {
@@ -17,18 +18,73 @@ class MyView2 extends PolymerElement {
       <style include="shared-styles">
         :host {
           display: block;
-
           padding: 10px;
+        }
+        .queue-item {
+          padding: 5px;
+          margin: 5px;
+          display: flex;
+          align-items: center;
+        }
+        .queue-item > div {
+          padding: 5px;
+        }
+
+        .queue-pending {
+          background: #DDDDDD;
+        }
+        .queue-active {
+          background: #FFFFCC;
+        }
+        .queue-done {
+          background: #CCFFCC;
+        }
+        .queue-failed {
+          background: #FFCCCC;
         }
       </style>
 
+      <iron-ajax
+          id="ajax"
+          url="/queue"
+          handle-as="json"
+          on-response="onResponse_"
+          auto></iron-ajax>
+
       <div class="card">
         <div class="circle">2</div>
-        <h1>View Two</h1>
-        <p>Ea duis bonorum nec, falli paulo aliquid ei eum.</p>
-        <p>Id nam odio natum malorum, tibique copiosae expetenda mel ea.Detracto suavitate repudiandae no eum. Id adhuc minim soluta nam.Id nam odio natum malorum, tibique copiosae expetenda mel ea.</p>
+        <h1>Process Queue</h1>
+        <div>
+          <template is="dom-repeat" items="[[response.Queue]]">
+            <div class$="queue-item queue-[[item.State]]">
+              <div>
+               <img src="/image?path=[[item.Timelapse.Path]]&thumb=true">
+              </div>
+              <div>[[item.Timelapse.Name]]</div>
+              <div>
+                  <paper-progress value="[[item.Progress]]"></paper-progress>
+              </div>
+              <div>[[item.Progress]]%</div>
+              <div>[[item.State]]</div>
+            </div>
+          </template>
+        </div>
       </div>
     `;
+  }
+
+  onResponse_(e) {
+    this.response = e.detail.response;
+    // Poll again after short delay.
+    setTimeout(() => this.$.ajax.generateRequest(), 1500);
+  }
+
+  static get properties() {
+    return {
+      response: {
+        type: Object,
+      },
+    };
   }
 }
 

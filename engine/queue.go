@@ -78,10 +78,11 @@ func (q *JobQueue) markJobDone(err error) {
 	j := q.current
 	if err != nil {
 		j.State = StateFailed
+		j.Progress = 0
 	} else {
 		j.State = StateDone
+		j.Progress = 100
 	}
-	j.Progress = 100
 
 	q.jobdonec = nil
 	q.jobprogressc = nil
