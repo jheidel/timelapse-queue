@@ -15,17 +15,11 @@ const (
 )
 
 type ImageHost struct {
-	browser *FileBrowser
-}
-
-func NewImageHost(f *FileBrowser) *ImageHost {
-	return &ImageHost{
-		browser: f,
-	}
+	Browser *FileBrowser
 }
 
 func (h *ImageHost) writeImage(rel string, thumb bool, w http.ResponseWriter) error {
-	path, err := h.browser.GetFullPath(rel)
+	path, err := h.Browser.GetFullPath(rel)
 	if err != nil {
 		return err
 	}

@@ -25,17 +25,22 @@ type Timelapse struct {
 	// DurationString is the length of the timelapse as a human readable string.
 	DurationString string
 
-	// The full path to the parent directory.
-	parentFullPath string
+	browser *FileBrowser
+}
+
+// GetOuputFullPath returns a path that can be used for file output with the given basename.
+func (t *Timelapse) GetOutputFullPath(base string) string {
+	return filepath.Join(t.browser.Root, t.GetOutputPath(base))
+}
+
+// GetOuputPath returns a relative path that can be used for file output with the given basename.
+func (t *Timelapse) GetOutputPath(base string) string {
+	parent, _ := filepath.Split(t.Path)
+	return filepath.Join(parent, base)
 }
 
 // GetFFmpegInputPath returns a full path that can be used for FFmpegInput.
 func (t *Timelapse) GetFFmpegInputPath() string {
 	base := fmt.Sprintf("%s%%%02dd.%s", t.Prefix, t.NumLen, t.Ext)
-	return filepath.Join(t.parentFullPath, base)
-}
-
-// GetOuputPath returns a path that can be used for file output with the given basename.
-func (t *Timelapse) GetOutputPath(base string) string {
-	return filepath.Join(t.parentFullPath, base)
+	return t.GetOutputFullPath(base)
 }

@@ -24,7 +24,7 @@ func Convert(ctx context.Context, config Config, timelapse *filebrowse.Timelapse
 	args := config.GetArgs(timelapse)
 	cmd := exec.Command(util.LocateFFmpegOrDie(), args...)
 
-	logf, err := os.Create(config.GetDebugPath(timelapse))
+	logf, err := os.Create(config.GetDebugFullPath(timelapse))
 	if err != nil {
 		return err
 	}
@@ -74,6 +74,8 @@ func Convert(ctx context.Context, config Config, timelapse *filebrowse.Timelapse
 			logger.Info(stdout.Text())
 		}
 	}()
+
+	logger.Infof("Running FFmpeg with args: %v", args)
 
 	if err := cmd.Start(); err != nil {
 		log.Errorf("Failed to start FFmpeg subprocess")

@@ -47,7 +47,8 @@ func main() {
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
 	fb := filebrowse.NewFileBrowser(*root)
-	ih := filebrowse.NewImageHost(fb)
+	ih := &filebrowse.ImageHost{fb}
+	lh := &filebrowse.LogHost{fb}
 
 	jq := engine.NewJobQueue()
 	go jq.Loop(context.Background())
@@ -61,6 +62,7 @@ func main() {
 		log.Infof("Hosting web frontend on port %d", *port)
 		http.Handle("/filebrowser", fb)
 		http.Handle("/image", ih)
+		http.Handle("/log", lh)
 		http.Handle("/convert", engine)
 		http.Handle("/queue", jq)
 		http.Handle("/",

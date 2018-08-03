@@ -8,6 +8,7 @@ import (
 
 type Config interface {
 	GetArgs(timelapse *filebrowse.Timelapse) []string
+	GetDebugFullPath(timelapse *filebrowse.Timelapse) string
 	GetDebugPath(timelapse *filebrowse.Timelapse) string
 }
 
@@ -23,8 +24,12 @@ func (f *configFake) GetArgs(t *filebrowse.Timelapse) []string {
 		"-preset", "slow",
 		"-crf", "17",
 		"-s", "1920x1080",
-		t.GetOutputPath("1080p-test.mp4"),
+		t.GetOutputFullPath("1080p-test.mp4"),
 	}
+}
+
+func (f *configFake) GetDebugFullPath(t *filebrowse.Timelapse) string {
+	return t.GetOutputFullPath("1080p-test.mp4.log")
 }
 
 func (f *configFake) GetDebugPath(t *filebrowse.Timelapse) string {

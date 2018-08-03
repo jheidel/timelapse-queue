@@ -160,13 +160,13 @@ func (f *FileBrowser) listPath(p string) (*Response, error) {
 			t = lookup
 		} else {
 			t = &Timelapse{
-				Name:           finfo.Name(),
-				Path:           rel,
-				parentFullPath: b,
-				Prefix:         prefix,
-				Ext:            ext,
-				Start:          num,
-				NumLen:         len(numStr),
+				Name:    finfo.Name(),
+				Path:    rel,
+				Prefix:  prefix,
+				Ext:     ext,
+				Start:   num,
+				NumLen:  len(numStr),
+				browser: f,
 			}
 			tmap[prefix] = t
 		}

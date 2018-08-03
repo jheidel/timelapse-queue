@@ -21,6 +21,8 @@ const (
 
 type Job struct {
 	State     jobState
+	ID        int
+	LogPath   string
 	Progress  int
 	Timelapse *filebrowse.Timelapse
 	Config    Config
@@ -29,21 +31,14 @@ type Job struct {
 type JobQueue struct {
 	Queue []*Job
 
+	jobIDgen int
+
 	current      *Job
 	jobdonec     chan error
 	jobprogressc chan int
 
 	serialc chan chan *jsonResp
 	addc    chan *Job
-}
-
-func (q *JobQueue) NextJob() *Job {
-	for _, j := range q.Queue {
-		if j.State == StatePending {
-			return j
-		}
-	}
-	return nil
 }
 
 func NewJobQueue() *JobQueue {
@@ -54,11 +49,20 @@ func NewJobQueue() *JobQueue {
 	}
 }
 
+func (q *JobQueue) nextJob() *Job {
+	for _, j := range q.Queue {
+		if j.State == StatePending {
+			return j
+		}
+	}
+	return nil
+}
+
 func (q *JobQueue) maybeStartNext(ctx context.Context) {
 	if q.current != nil {
 		return // Job already running.
 	}
-	j := q.NextJob()
+	j := q.nextJob()
 	if j == nil {
 		return // No jobs remaining.
 	}
@@ -67,6 +71,7 @@ func (q *JobQueue) maybeStartNext(ctx context.Context) {
 	q.jobprogressc = make(chan int)
 	q.current = j
 	j.State = StateActive
+	j.LogPath = j.Config.GetDebugPath(j.Timelapse)
 	go func() {
 		defer close(q.jobdonec)
 		q.jobdonec <- Convert(ctx, j.Config, j.Timelapse, q.jobprogressc)
@@ -96,7 +101,9 @@ func (q *JobQueue) AddJob(config Config, t *filebrowse.Timelapse) {
 		State:     StatePending,
 		Timelapse: t,
 		Config:    config,
+		ID:        q.jobIDgen,
 	}
+	q.jobIDgen += 1
 	q.addc <- j
 }
 

@@ -66,6 +66,9 @@ class MyView2 extends PolymerElement {
               </div>
               <div>[[item.Progress]]%</div>
               <div>[[item.State]]</div>
+              <div hidden$="[[!item.LogPath]]">
+                <a href="/log?path=[[item.LogPath]]" target="_blank">Log</a>
+              </div>
             </div>
           </template>
         </div>
