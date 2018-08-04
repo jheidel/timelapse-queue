@@ -3,7 +3,9 @@ package engine
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	"timelapse-queue/filebrowse"
@@ -32,6 +34,9 @@ type Job struct {
 	ElapsedString string
 	start         time.Time
 	stop          time.Time
+
+	// Cancels this job.
+	cancelf context.CancelFunc
 }
 
 type JobQueue struct {
@@ -45,6 +50,8 @@ type JobQueue struct {
 
 	serialc chan chan *jsonResp
 	addc    chan *Job
+	cancelc chan *jobOp
+	removec chan *jobOp
 }
 
 func NewJobQueue() *JobQueue {
@@ -52,7 +59,14 @@ func NewJobQueue() *JobQueue {
 		Queue:   []*Job{},
 		serialc: make(chan chan *jsonResp),
 		addc:    make(chan *Job),
+		cancelc: make(chan *jobOp),
+		removec: make(chan *jobOp),
 	}
+}
+
+type jobOp struct {
+	ID   int
+	Errc chan error
 }
 
 func (q *JobQueue) nextJob() *Job {
@@ -61,6 +75,43 @@ func (q *JobQueue) nextJob() *Job {
 			return j
 		}
 	}
+	return nil
+}
+
+func (q *JobQueue) getJob(ID int) *Job {
+	for _, j := range q.Queue {
+		if j.ID == ID {
+			return j
+		}
+	}
+	return nil
+}
+
+func (q *JobQueue) removeJob(ID int) error {
+	for i, j := range q.Queue {
+		if j.ID == ID {
+			if j.State == StateActive {
+				return fmt.Errorf("could not remove job %v in state %v", ID, j.State)
+			}
+			q.Queue = append(q.Queue[0:i], q.Queue[i+1:]...)
+			return nil
+		}
+	}
+	return fmt.Errorf("job %v not found in queue", ID)
+}
+
+func (q *JobQueue) cancelJob(ID int) error {
+	j := q.getJob(ID)
+	if j == nil {
+		return fmt.Errorf("job %v not found", ID)
+	}
+
+	if j.cancelf == nil {
+		return fmt.Errorf("job not running or already canceled")
+	}
+
+	j.cancelf()
+	j.cancelf = nil
 	return nil
 }
 
@@ -73,16 +124,19 @@ func (q *JobQueue) maybeStartNext(ctx context.Context) {
 		return // No jobs remaining.
 	}
 	// Start next job.
-	q.jobdonec = make(chan error)
-	q.jobprogressc = make(chan int)
-	q.current = j
 	j.State = StateActive
 	j.LogPath = j.Config.GetDebugPath(j.Timelapse)
 	j.start = time.Now()
+
+	jobCtx, cancel := context.WithCancel(ctx)
+	q.jobdonec = make(chan error)
+	q.jobprogressc = make(chan int)
+	j.cancelf = cancel
 	go func() {
 		defer close(q.jobdonec)
-		q.jobdonec <- Convert(ctx, j.Config, j.Timelapse, q.jobprogressc)
+		q.jobdonec <- Convert(jobCtx, j.Config, j.Timelapse, q.jobprogressc)
 	}()
+	q.current = j
 	log.Infof("job started")
 }
 
@@ -91,7 +145,6 @@ func (q *JobQueue) markJobDone(err error) {
 	j.stop = time.Now()
 	if err != nil {
 		j.State = StateFailed
-		j.Progress = 0
 	} else {
 		j.State = StateDone
 		j.Progress = 100
@@ -144,6 +197,14 @@ func (q *JobQueue) Loop(ctx context.Context) {
 			q.Queue = append(q.Queue, j)
 			log.Info("new job added to queue")
 			q.maybeStartNext(ctx)
+		case t := <-q.cancelc:
+			log.Infof("issue cancel of job %d", t.ID)
+			err := q.cancelJob(t.ID)
+			t.Errc <- err
+		case t := <-q.removec:
+			log.Infof("remove job %d", t.ID)
+			err := q.removeJob(t.ID)
+			t.Errc <- err
 		case err := <-q.jobdonec:
 			q.markJobDone(err)
 			q.maybeStartNext(ctx)
@@ -173,4 +234,39 @@ func (q *JobQueue) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(resp.Result)
+}
+
+func (q *JobQueue) handlePostJobOp(w http.ResponseWriter, r *http.Request, opc chan *jobOp) {
+	if r.Method != "POST" {
+		http.Error(w, "Requires POST", http.StatusBadRequest)
+		return
+	}
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	ID, err := strconv.Atoi(r.Form.Get("id"))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	t := &jobOp{
+		ID:   ID,
+		Errc: make(chan error),
+	}
+	opc <- t
+	err = <-t.Errc
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+}
+
+func (q *JobQueue) ServeCancel(w http.ResponseWriter, r *http.Request) {
+	q.handlePostJobOp(w, r, q.cancelc)
+}
+
+func (q *JobQueue) ServeRemove(w http.ResponseWriter, r *http.Request) {
+	q.handlePostJobOp(w, r, q.removec)
 }

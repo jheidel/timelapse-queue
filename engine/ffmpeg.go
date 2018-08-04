@@ -48,8 +48,19 @@ func Convert(ctx context.Context, config Config, timelapse *filebrowse.Timelapse
 
 	go func() {
 		for stderr.Scan() {
-			l := stderr.Text()
-			logger.Error(l)
+			logger.Error(stderr.Text())
+		}
+	}()
+
+	r, err = cmd.StdoutPipe()
+	if err != nil {
+		return err
+	}
+	stdout := bufio.NewScanner(r)
+	go func() {
+		for stdout.Scan() {
+			l := stdout.Text()
+			logger.Info(l)
 
 			m := progressRE.FindStringSubmatch(l)
 			if len(m) != 2 {
@@ -61,17 +72,6 @@ func Convert(ctx context.Context, config Config, timelapse *filebrowse.Timelapse
 				continue
 			}
 			progress <- 100 * i / timelapse.Count
-		}
-	}()
-
-	r, err = cmd.StdoutPipe()
-	if err != nil {
-		return err
-	}
-	stdout := bufio.NewScanner(r)
-	go func() {
-		for stdout.Scan() {
-			logger.Info(stdout.Text())
 		}
 	}()
 

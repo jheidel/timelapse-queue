@@ -11,6 +11,8 @@
 import { PolymerElement, html } from '@polymer/polymer/polymer-element.js';
 import './shared-styles.js';
 import '@polymer/paper-progress/paper-progress.js';
+import '@polymer/paper-button/paper-button.js';
+import '@polymer/paper-toast/paper-toast.js';
 
 class MyView2 extends PolymerElement {
   static get template() {
@@ -45,11 +47,20 @@ class MyView2 extends PolymerElement {
       </style>
 
       <iron-ajax
-          id="ajax"
+          id="fetch"
           url="/queue"
           handle-as="json"
           on-response="onResponse_"
           auto></iron-ajax>
+      <iron-ajax
+          id="op"
+          method="POST"
+          handle-as="text"
+          on-response="onOpSuccess_"
+          on-error="onOpError_"
+          ></iron-ajax>
+
+      <paper-toast id="toast"></paper-toast>
 
       <div class="card">
         <div class="circle">2</div>
@@ -73,6 +84,12 @@ class MyView2 extends PolymerElement {
                   <div>[[item.State]]</div>
                   <div hidden$="[[!item.ElapsedString]]">[[item.ElapsedString]]</div>
               </div>
+              <div hidden$="[[!isState_(item, 'active')]]">
+                  <paper-button data-jobid$="[[item.ID]]" data-url="/queue-cancel" on-tap="onOp_" raised>Cancel</paper-button>
+              </div>
+              <div hidden$="[[isState_(item, 'active')]]">
+                  <paper-button data-jobid$="[[item.ID]]" data-url="/queue-remove" on-tap="onOp_" raised>Remove</paper-button>
+              </div>
               <div hidden$="[[!item.LogPath]]">
                 <a href="/log?path=[[item.LogPath]]" target="_blank">Log</a>
               </div>
@@ -86,7 +103,28 @@ class MyView2 extends PolymerElement {
   onResponse_(e) {
     this.response = e.detail.response;
     // Poll again after short delay.
-    setTimeout(() => this.$.ajax.generateRequest(), 1500);
+    setTimeout(() => this.$.fetch.generateRequest(), 1500);
+  }
+
+  isState_(j, state) {
+    return !!j && j.State === state;
+  }
+
+  onOp_(e) {
+    const jobid = e.target.dataset.jobid;
+    const url = e.target.dataset.url;
+    this.$.op.url = url;
+    this.$.op.headers={'content-type': 'application/x-www-form-urlencoded'};
+    this.$.op.body = {'id': jobid};
+    this.$.op.generateRequest();
+  }
+
+  onOpSuccess_(e) {
+    this.$.toast.show("Job change request succeeded.");
+  }
+
+  onOpError_(e) {
+    this.$.toast.show("Job change request failed: " + e.detail.request.xhr.response);
   }
 
   static get properties() {

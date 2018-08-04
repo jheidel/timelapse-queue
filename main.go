@@ -65,6 +65,8 @@ func main() {
 		http.Handle("/log", lh)
 		http.Handle("/convert", engine)
 		http.Handle("/queue", jq)
+		http.HandleFunc("/queue-cancel", jq.ServeCancel)
+		http.HandleFunc("/queue-remove", jq.ServeRemove)
 		http.Handle("/",
 			http.FileServer(
 				&assetfs.AssetFS{Asset: Asset, AssetDir: AssetDir, AssetInfo: AssetInfo, Prefix: "web/build/default"}))
