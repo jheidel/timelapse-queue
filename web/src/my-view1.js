@@ -11,6 +11,7 @@
 import { PolymerElement, html } from '@polymer/polymer/polymer-element.js';
 import './shared-styles.js';
 import '@polymer/iron-ajax/iron-ajax.js';
+import '@polymer/paper-toast/paper-toast.js';
 import '@polymer/paper-button/paper-button.js';
 import '@polymer/paper-spinner/paper-spinner.js';
 import Croppr from 'croppr/src/croppr.js';
@@ -51,6 +52,16 @@ class MyView1 extends PolymerElement {
           handle-as="json"
           last-response="{{response}}"
           ></iron-ajax>
+      <iron-ajax
+          id="convert"
+          url="/convert"
+          method="POST"
+          handle-as="text"
+          on-response="onConvertSuccess_"
+          on-error="onConvertSuccess_"
+          ></iron-ajax>
+
+      <paper-toast id="toast"></paper-toast>
 
       <div class="card">
         <div class="circle">1</div>
@@ -97,6 +108,9 @@ class MyView1 extends PolymerElement {
             <span>Size [[crop.width]]x[[crop.height]]</span>
           </div>
         </div>
+        <div>
+            <paper-button on-tap="onConvert_">Start Job</paper-button>
+        </div>
       </div>
     `;
   }
@@ -113,24 +127,48 @@ class MyView1 extends PolymerElement {
       console.log(e);
       console.log(e.model.item);
       this.loading_ = true;
+      this.timelapse = e.model.item;
 
-      const img = this.shadowRoot.querySelector("#croppr");
-          console.log(img);
+      this.$.croppr.src = '/image?path=' + this.timelapse.Path;
 
-          img.src = '/image?path=' + e.model.item.Path;
+      // TODO set these based on job configuration.
+      const width = 1920;
+      const height = 1080;
 
-          this.croppr = new Croppr(img, {
-                  aspectRatio: 9/16,
-                  startSize: [100, 100, '%'],
-                  onCropMove: (value) => {
-                    this.crop = value;
-                  },
-                  onInitialize: (instance) => {
-                    this.crop = instance.getValue();
-                    this.showSelect_ = true;
-                    this.loading_ = false;
-                  },
-          });
+      this.croppr = new Croppr(this.$.croppr, {
+              aspectRatio: height / width,
+              startSize: [100, 100, '%'],
+              // TODO would be nice to set this but it's buggy.
+              // minSize: [width, height, 'px'],
+              onCropMove: (value) => {
+                this.crop = value;
+              },
+              onInitialize: (instance) => {
+                this.crop = instance.getValue();
+                this.showSelect_ = true;
+                this.loading_ = false;
+              },
+      });
+  }
+
+  onConvert_(e) {
+    this.$.convert.headers={'content-type': 'application/x-www-form-urlencoded'};
+    this.$.convert.body = {
+      'path': this.timelapse.Path,
+      'x': this.crop.x,
+      'y': this.crop.y,
+      'width': this.crop.width,
+      'height': this.crop.height,
+    };
+    this.$.convert.generateRequest();
+  }
+
+  onConvertSuccess_(e) {
+    this.$.toast.show("Job successfully queued.");
+  }
+
+  onConvertError_(e) {
+    this.$.toast.show("Job creation failed: " + e.detail.request.xhr.response);
   }
 
   static get properties() {
@@ -143,6 +181,9 @@ class MyView1 extends PolymerElement {
         type: Object,
       },
       crop: {
+        type: Object,
+      },
+      timelapse: {
         type: Object,
       },
       showSelect_: {
