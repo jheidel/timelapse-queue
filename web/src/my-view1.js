@@ -12,10 +12,13 @@ import { PolymerElement, html } from '@polymer/polymer/polymer-element.js';
 import './shared-styles.js';
 import '@polymer/iron-ajax/iron-ajax.js';
 import '@polymer/paper-button/paper-button.js';
+import '@polymer/paper-spinner/paper-spinner.js';
+import Croppr from 'croppr/src/croppr.js';
 
 class MyView1 extends PolymerElement {
   static get template() {
     return html`
+      <link rel="stylesheet" href="../node_modules/croppr/src/css/croppr.css">
       <style include="shared-styles">
         :host {
           display: block;
@@ -34,6 +37,10 @@ class MyView1 extends PolymerElement {
         }
         .timelapses {
           color: blue;
+        }
+        .cropbox {
+            width: 640px;
+            height: 480px;
         }
       </style>
 
@@ -73,11 +80,22 @@ class MyView1 extends PolymerElement {
               </a>
              </div>
              <div><span>[[item.Count]]</span> images (<span>[[item.DurationString]]</span>)</div>
-             <a href="/convert?path=[[item.Path]]" target="_blank">
-              <paper-button>[[item.Name]]</paper-button>
-             </a>
+            <paper-button on-tap="_onSelectTimelapse">[[item.Name]]</paper-button>
           </div>
           </template>
+        </div>
+
+
+        <hr>
+        <paper-spinner active="[[loading_]]"></paper-spinner>
+        <div>
+          <div class="cropbox">
+            <img id="croppr"/>
+          </div>
+          <div>
+            <span>x=[[crop.x]] y=[[crop.y]]</span>
+            <span>Size [[crop.width]]x[[crop.height]]</span>
+          </div>
         </div>
       </div>
     `;
@@ -91,6 +109,30 @@ class MyView1 extends PolymerElement {
       return {'path': path};
   }
 
+  _onSelectTimelapse(e) {
+      console.log(e);
+      console.log(e.model.item);
+      this.loading_ = true;
+
+      const img = this.shadowRoot.querySelector("#croppr");
+          console.log(img);
+
+          img.src = '/image?path=' + e.model.item.Path;
+
+          this.croppr = new Croppr(img, {
+                  aspectRatio: 9/16,
+                  startSize: [100, 100, '%'],
+                  onCropMove: (value) => {
+                    this.crop = value;
+                  },
+                  onInitialize: (instance) => {
+                    this.crop = instance.getValue();
+                    this.showSelect_ = true;
+                    this.loading_ = false;
+                  },
+          });
+  }
+
   static get properties() {
     return {
       path: {
@@ -99,6 +141,17 @@ class MyView1 extends PolymerElement {
       },
       response: {
         type: Object,
+      },
+      crop: {
+        type: Object,
+      },
+      showSelect_: {
+        type: Boolean,
+        value: false,
+      },
+      loading_: {
+        type: Boolean,
+        value: false,
       },
     };
   }
