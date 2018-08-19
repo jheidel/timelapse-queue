@@ -28,10 +28,6 @@ import './my-icons.js';
 // preventable, allowing for better scrolling performance.
 setPassiveTouchGestures(true);
 
-// Set Polymer's root path to the same value we passed to our service worker
-// in `index.html`.
-setRootPath(MyAppGlobals.rootPath);
-
 class MyApp extends PolymerElement {
   static get template() {
     return html`
@@ -74,10 +70,9 @@ class MyApp extends PolymerElement {
         }
       </style>
 
-      <app-location route="{{route}}" url-space-regex="^[[rootPath]]">
-      </app-location>
+      <app-location route="{{route}}" use-hash-as-path></app-location>
 
-      <app-route route="{{route}}" pattern="[[rootPath]]:page" data="{{routeData}}" tail="{{subroute}}">
+      <app-route route="{{route}}" pattern="/:page" data="{{routeData}}" tail="{{subroute}}">
       </app-route>
 
       <paper-toast id="toast"></paper-toast>
@@ -87,9 +82,9 @@ class MyApp extends PolymerElement {
         <app-drawer id="drawer" slot="drawer" swipe-open="[[narrow]]">
           <app-toolbar>Menu</app-toolbar>
           <iron-selector selected="[[page]]" attr-for-selected="name" class="drawer-list" role="navigation">
-            <a name="view1" href="[[rootPath]]view1">View One</a>
-            <a name="view2" href="[[rootPath]]view2">View Two</a>
-            <a name="view3" href="[[rootPath]]view3">View Three</a>
+            <a name="view1" href="#/view1">View One</a>
+            <a name="view2" href="#/view2">View Two</a>
+            <a name="view3" href="#/view3">View Three</a>
           </iron-selector>
         </app-drawer>
 

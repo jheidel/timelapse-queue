@@ -12,6 +12,8 @@ import { PolymerElement, html } from '@polymer/polymer/polymer-element.js';
 import './shared-styles.js';
 import '@polymer/iron-ajax/iron-ajax.js';
 import '@polymer/paper-button/paper-button.js';
+import '@polymer/iron-icon/iron-icon.js';
+import '@polymer/iron-icons/iron-icons.js';
 import '@polymer/paper-spinner/paper-spinner.js';
 import Croppr from 'croppr/src/croppr.js';
 
@@ -22,25 +24,23 @@ class MyView1 extends PolymerElement {
       <style include="shared-styles">
         :host {
           display: block;
-
           padding: 10px;
         }
         .files {
           display: flex;
           flex-wrap: wrap;
         }
-        .parents {
+        .parents paper-button {
           color: red;
         }
-        .dirs {
+        .dirs paper-button {
           color: green;
         }
-        .timelapses {
+        .timelapses paper-button {
           color: blue;
         }
         .cropbox {
-            width: 640px;
-            height: 480px;
+          max-width: 800px;
         }
       </style>
 
@@ -66,7 +66,10 @@ class MyView1 extends PolymerElement {
         <div class="files parents">
           <template is="dom-repeat" items="[[response.Parents]]">
           <div>
-           <paper-button on-tap="_onDir">[[item.Name]]</paper-button>
+           <paper-button on-tap="_onDir">
+             <iron-icon icon="arrow-back"></iron-icon>
+             [[item.Name]]
+           </paper-button>
           </div>
           </template>
         </div>
@@ -74,7 +77,10 @@ class MyView1 extends PolymerElement {
         <div class="files dirs">
           <template is="dom-repeat" items="[[response.Dirs]]">
           <div>
-           <paper-button on-tap="_onDir">[[item.Name]]</paper-button>
+           <paper-button on-tap="_onDir">
+             <iron-icon icon="folder"></iron-icon>
+             [[item.Name]]
+           </paper-button>
           </div>
           </template>
         </div>
@@ -106,7 +112,7 @@ class MyView1 extends PolymerElement {
           </div>
         </div>
         <div>
-            <paper-button on-tap="onConvert_">Start Job</paper-button>
+            <paper-button on-tap="onConvert_" raised>Start Job</paper-button>
         </div>
       </div>
     `;
@@ -135,8 +141,8 @@ class MyView1 extends PolymerElement {
       this.croppr = new Croppr(this.$.croppr, {
               aspectRatio: height / width,
               startSize: [100, 100, '%'],
-              // TODO would be nice to set this but it's buggy.
-              // minSize: [width, height, 'px'],
+              // TODO doesn't work when the canvas is scaled.
+              //minSize: [width, height, 'px'],
               onCropMove: (value) => {
                 this.crop = value;
               },
