@@ -11,7 +11,6 @@
 import { PolymerElement, html } from '@polymer/polymer/polymer-element.js';
 import './shared-styles.js';
 import '@polymer/iron-ajax/iron-ajax.js';
-import '@polymer/paper-toast/paper-toast.js';
 import '@polymer/paper-button/paper-button.js';
 import '@polymer/paper-spinner/paper-spinner.js';
 import Croppr from 'croppr/src/croppr.js';
@@ -60,8 +59,6 @@ class MyView1 extends PolymerElement {
           on-response="onConvertSuccess_"
           on-error="onConvertSuccess_"
           ></iron-ajax>
-
-      <paper-toast id="toast"></paper-toast>
 
       <div class="card">
         <div class="circle">1</div>
@@ -164,11 +161,15 @@ class MyView1 extends PolymerElement {
   }
 
   onConvertSuccess_(e) {
-    this.$.toast.show("Job successfully queued.");
+    this.toast_("Job successfully queued.");
   }
 
   onConvertError_(e) {
-    this.$.toast.show("Job creation failed: " + e.detail.request.xhr.response);
+    this.toast_("Job creation failed: " + e.detail.request.xhr.response);
+  }
+
+  toast_(msg) {
+    this.dispatchEvent(new CustomEvent('toast', {detail: msg, bubbles: true, composed: true}));
   }
 
   static get properties() {

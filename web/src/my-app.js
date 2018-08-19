@@ -13,6 +13,7 @@ import { setPassiveTouchGestures, setRootPath } from '@polymer/polymer/lib/utils
 import '@polymer/app-layout/app-drawer/app-drawer.js';
 import '@polymer/app-layout/app-drawer-layout/app-drawer-layout.js';
 import '@polymer/app-layout/app-header/app-header.js';
+import '@polymer/paper-toast/paper-toast.js';
 import '@polymer/app-layout/app-header-layout/app-header-layout.js';
 import '@polymer/app-layout/app-scroll-effects/app-scroll-effects.js';
 import '@polymer/app-layout/app-toolbar/app-toolbar.js';
@@ -79,6 +80,8 @@ class MyApp extends PolymerElement {
       <app-route route="{{route}}" pattern="[[rootPath]]:page" data="{{routeData}}" tail="{{subroute}}">
       </app-route>
 
+      <paper-toast id="toast"></paper-toast>
+
       <app-drawer-layout fullbleed="" narrow="{{narrow}}">
         <!-- Drawer content -->
         <app-drawer id="drawer" slot="drawer" swipe-open="[[narrow]]">
@@ -127,6 +130,17 @@ class MyApp extends PolymerElement {
     return [
       '_routePageChanged(routeData.page)'
     ];
+  }
+
+  ready() {
+          this.addEventListener('toast', this._onToast);
+          super.ready();
+  }
+
+  _onToast(e) {
+          console.log('received');
+    console.log(e);
+          this.$.toast.show(e.detail);
   }
 
   _routePageChanged(page) {

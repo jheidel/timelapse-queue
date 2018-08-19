@@ -12,7 +12,6 @@ import { PolymerElement, html } from '@polymer/polymer/polymer-element.js';
 import './shared-styles.js';
 import '@polymer/paper-progress/paper-progress.js';
 import '@polymer/paper-button/paper-button.js';
-import '@polymer/paper-toast/paper-toast.js';
 
 class MyView2 extends PolymerElement {
   static get template() {
@@ -59,8 +58,6 @@ class MyView2 extends PolymerElement {
           on-response="onOpSuccess_"
           on-error="onOpError_"
           ></iron-ajax>
-
-      <paper-toast id="toast"></paper-toast>
 
       <div class="card">
         <div class="circle">2</div>
@@ -120,11 +117,15 @@ class MyView2 extends PolymerElement {
   }
 
   onOpSuccess_(e) {
-    this.$.toast.show("Job change request succeeded.");
+    this.toast_("Job change request succeeded.");
   }
 
   onOpError_(e) {
-    this.$.toast.show("Job change request failed: " + e.detail.request.xhr.response);
+    this.toast_("Job change request failed: " + e.detail.request.xhr.response);
+  }
+
+  toast_(msg) {
+    this.dispatchEvent(new CustomEvent('toast', {detail: msg, bubbles: true, composed: true}));
   }
 
   static get properties() {
