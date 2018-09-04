@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"image"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -13,26 +14,34 @@ type TestServer struct {
 	Queue   *JobQueue
 }
 
-func parseBounds(values url.Values) (*Bounds, error) {
-	var err error
-	b := &Bounds{}
-	b.X, err = strconv.Atoi(values.Get("x"))
+func parseBounds(values url.Values) (image.Rectangle, error) {
+	x, err := strconv.Atoi(values.Get("x"))
 	if err != nil {
-		return nil, err
+		return image.Rectangle{}, err
 	}
-	b.Y, err = strconv.Atoi(values.Get("y"))
+	y, err := strconv.Atoi(values.Get("y"))
 	if err != nil {
-		return nil, err
+		return image.Rectangle{}, err
 	}
-	b.Width, err = strconv.Atoi(values.Get("width"))
+	width, err := strconv.Atoi(values.Get("width"))
 	if err != nil {
-		return nil, err
+		return image.Rectangle{}, err
 	}
-	b.Height, err = strconv.Atoi(values.Get("height"))
+	height, err := strconv.Atoi(values.Get("height"))
 	if err != nil {
-		return nil, err
+		return image.Rectangle{}, err
 	}
-	return b, nil
+	rect := image.Rectangle{
+		Min: image.Point{
+			X: x,
+			Y: y,
+		},
+		Max: image.Point{
+			X: x + width,
+			Y: y + height,
+		},
+	}
+	return rect, nil
 }
 
 func (s *TestServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -59,7 +68,7 @@ func (s *TestServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	config := &configFake{
-		Bounds: b,
+		Region: b,
 	}
 
 	if err := config.Validate(t); err != nil {

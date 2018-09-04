@@ -2,7 +2,11 @@ package filebrowse
 
 import (
 	"fmt"
+	"image"
+	"os"
 	"path/filepath"
+
+	"github.com/pixiv/go-libjpeg/jpeg"
 )
 
 type Timelapse struct {
@@ -28,12 +32,12 @@ type Timelapse struct {
 	browser *FileBrowser
 }
 
-// GetOuputFullPath returns a path that can be used for file output with the given basename.
+// GetOutputFullPath returns a path that can be used for file output with the given basename.
 func (t *Timelapse) GetOutputFullPath(base string) string {
 	return filepath.Join(t.browser.Root, t.GetOutputPath(base))
 }
 
-// GetOuputPath returns a relative path that can be used for file output with the given basename.
+// GetOutputPath returns a relative path that can be used for file output with the given basename.
 func (t *Timelapse) GetOutputPath(base string) string {
 	parent, _ := filepath.Split(t.Path)
 	return filepath.Join(parent, base)
@@ -43,4 +47,41 @@ func (t *Timelapse) GetOutputPath(base string) string {
 func (t *Timelapse) GetFFmpegInputPath() string {
 	base := fmt.Sprintf("%s%%%02dd.%s", t.Prefix, t.NumLen, t.Ext)
 	return t.GetOutputFullPath(base)
+}
+
+func (t *Timelapse) getImage(num int) (*image.RGBA, error) {
+	basef := fmt.Sprintf("%s%%%02dd.%s", t.Prefix, t.NumLen, t.Ext)
+	base := fmt.Sprintf(basef, num)
+
+	f, err := os.Open(t.GetOutputFullPath(base))
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	// Requires libjpeg-turbo
+	img, err := jpeg.DecodeIntoRGBA(f, &jpeg.DecoderOptions{})
+	if err != nil {
+		return nil, err
+	}
+	return img, nil
+}
+
+// Images produces a stream of images for this timelapse.
+func (t *Timelapse) Images() (<-chan *image.RGBA, chan error) {
+	errc := make(chan error, 1)
+	imagec := make(chan *image.RGBA)
+	go func() {
+		defer close(imagec)
+		defer close(errc)
+		for i := t.Start; i < t.Start+t.Count; i++ {
+			img, err := t.getImage(i)
+			if err != nil {
+				errc <- err
+				return
+			}
+			imagec <- img
+		}
+	}()
+	return imagec, errc
 }

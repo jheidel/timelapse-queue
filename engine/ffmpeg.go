@@ -3,13 +3,18 @@ package engine
 import (
 	"bufio"
 	"context"
+	"fmt"
+	"image"
 	"os"
 	"os/exec"
 	"regexp"
 	"strconv"
 
 	"timelapse-queue/filebrowse"
+	"timelapse-queue/process"
 	"timelapse-queue/util"
+
+	"github.com/pkg/profile"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -18,11 +23,14 @@ var (
 	progressRE = regexp.MustCompile(`frame=\s*(\d+)`)
 )
 
-func Convert(ctx context.Context, config Config, timelapse *filebrowse.Timelapse, progress chan<- int) error {
+func Convert(pctx context.Context, config Config, timelapse *filebrowse.Timelapse, progress chan<- int) error {
 	defer close(progress)
 
-	args := config.GetArgs(timelapse)
-	cmd := exec.Command(util.LocateFFmpegOrDie(), args...)
+	if false {
+		defer profile.Start().Stop()
+	}
+
+	ctx, cancelf := context.WithCancel(pctx)
 
 	logf, err := os.Create(config.GetDebugFullPath(timelapse))
 	if err != nil {
@@ -40,6 +48,56 @@ func Convert(ctx context.Context, config Config, timelapse *filebrowse.Timelapse
 		Level:     log.DebugLevel,
 	}
 
+	// TODO: use a filter chain from config to apply resize.
+	imagec, imerrc := timelapse.Images()
+
+	cropper := process.Crop{
+		Region: config.GetRegion(),
+	}
+	imagec, imerrc = cropper.Process(imagec, imerrc)
+
+	resizer := process.Resizer{
+		Size: image.Point{X: 1920, Y: 1080},
+	}
+	imagec, imerrc = resizer.Process(imagec, imerrc)
+
+	// Pull a sample image from the stream (to build config)
+	var sample *image.RGBA
+	select {
+	case sample = <-imagec:
+		break
+	case err := <-imerrc:
+		logger.Errorf("Failed to fetch a sample image: %v", err)
+		return err
+	}
+
+	// Watch for future errors on the input channel. Any errors here should abort
+	// ffmpeg (by context cancelation).
+	go func() {
+		err := <-imerrc
+		if err != nil {
+			logger.Errorf("Error reading image: %v", err)
+			cancelf() // Abort ffmpeg.
+		}
+	}()
+
+	args := []string{
+		"-framerate", "60",
+
+		"-f", "rawvideo",
+		"-pixel_format", "bgr32",
+		"-video_size", fmt.Sprintf("%dx%d", sample.Rect.Max.X, sample.Rect.Max.Y),
+		"-i", "-", // Read from stdin.
+
+		"-c:v", "libx264",
+		"-preset", "slow",
+		"-crf", "17",
+		"-s", fmt.Sprintf("%dx%d", sample.Rect.Max.X, sample.Rect.Max.Y),
+		"-progress", "/dev/stdout",
+		timelapse.GetOutputFullPath("1080p-test.mp4"),
+	}
+
+	cmd := exec.Command(util.LocateFFmpegOrDie(), args...)
 	r, err := cmd.StderrPipe()
 	if err != nil {
 		return err
@@ -72,6 +130,31 @@ func Convert(ctx context.Context, config Config, timelapse *filebrowse.Timelapse
 				continue
 			}
 			progress <- 100 * i / timelapse.Count
+		}
+	}()
+
+	// Stream images to ffmpeg.
+	pin, err := cmd.StdinPipe()
+	if err != nil {
+		return err
+	}
+	go func() {
+		defer pin.Close()
+		// Make sure to include the sample image we took earlier.
+		_, err := pin.Write(sample.Pix)
+		if err != nil {
+			logger.Errorf("Failed to write initial image to ffmpeg: %v", err)
+			cancelf()
+			return
+		}
+		// Write remainder of image stream to ffmpeg.
+		for img := range imagec {
+			_, err := pin.Write(img.Pix)
+			if err != nil {
+				logger.Errorf("Failed to write image to ffmpeg: %v", err)
+				cancelf()
+				return
+			}
 		}
 	}()
 

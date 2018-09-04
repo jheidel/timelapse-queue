@@ -29,6 +29,15 @@ if ! [ -x "$(command -v go-bindata)" ]; then
 fi
 go-bindata web/build/default/...
 
+# Check for libjpeg-turbo (dependency of pixiv/go-libjpeg)
+ldconfig -p | grep libjpeg
+if [ $? -ne 0 ]; then
+  echo "Missing libjpeg."
+  echo "libjpeg-turbo recommended for better performance."
+  echo "On ubuntu: sudo apt-get install libjpeg-turbo8-dev"
+  exit 1
+fi
+
 # Build standalone binary with resources embedded
 if ! [ -x "$(command -v go)" ]; then
   echo "Missing go. https://golang.org/doc/install"
