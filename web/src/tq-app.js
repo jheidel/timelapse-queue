@@ -1,13 +1,3 @@
-/**
- * @license
- * Copyright (c) 2016 The Polymer Project Authors. All rights reserved.
- * This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
- * The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
- * The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
- * Code distributed by Google as part of the polymer project is also
- * subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
- */
-
 import { PolymerElement, html } from '@polymer/polymer/polymer-element.js';
 import { setPassiveTouchGestures, setRootPath } from '@polymer/polymer/lib/utils/settings.js';
 import '@polymer/app-layout/app-drawer/app-drawer.js';
@@ -19,16 +9,19 @@ import '@polymer/app-layout/app-scroll-effects/app-scroll-effects.js';
 import '@polymer/app-layout/app-toolbar/app-toolbar.js';
 import '@polymer/app-route/app-location.js';
 import '@polymer/app-route/app-route.js';
+import '@polymer/iron-icon/iron-icon.js';
+import '@polymer/iron-icons/iron-icons.js';
 import '@polymer/iron-pages/iron-pages.js';
 import '@polymer/iron-selector/iron-selector.js';
 import '@polymer/paper-icon-button/paper-icon-button.js';
-import './my-icons.js';
+import '@polymer/paper-item/paper-icon-item.js';
+import './tq-icons.js';
 
 // Gesture events like tap and track generated from touch will not be
 // preventable, allowing for better scrolling performance.
 setPassiveTouchGestures(true);
 
-class MyApp extends PolymerElement {
+class TimelapseQueueApp extends PolymerElement {
   static get template() {
     return html`
       <style>
@@ -81,10 +74,15 @@ class MyApp extends PolymerElement {
         <!-- Drawer content -->
         <app-drawer id="drawer" slot="drawer" swipe-open="[[narrow]]">
           <app-toolbar>Menu</app-toolbar>
-          <iron-selector selected="[[page]]" attr-for-selected="name" class="drawer-list" role="navigation">
-            <a name="view1" href="#/view1">View One</a>
-            <a name="view2" href="#/view2">View Two</a>
-            <a name="view3" href="#/view3">View Three</a>
+          <iron-selector selected="{{page}}" attr-for-selected="name" class="drawer-list" role="navigation">
+            <paper-icon-item name="browse">
+              <iron-icon icon="add" slot="item-icon"></iron-icon>
+              <span>Add Timelapse</span>
+            </paper-icon-item>
+            <paper-icon-item name="queue">
+              <iron-icon icon="view-list" slot="item-icon"></iron-icon>
+              <span>View Queue</span>
+            </paper-icon-item>
           </iron-selector>
         </app-drawer>
 
@@ -93,16 +91,16 @@ class MyApp extends PolymerElement {
 
           <app-header slot="header" condenses="" reveals="" effects="waterfall">
             <app-toolbar>
-              <paper-icon-button icon="my-icons:menu" drawer-toggle=""></paper-icon-button>
-              <div main-title="">My App</div>
+              <paper-icon-button icon="tq-icons:menu" drawer-toggle=""></paper-icon-button>
+              <div main-title="">Timelapse Queue</div>
             </app-toolbar>
           </app-header>
 
           <iron-pages selected="[[page]]" attr-for-selected="name" role="main">
-            <my-view1 name="view1"></my-view1>
-            <my-view2 name="view2"></my-view2>
-            <my-view3 name="view3"></my-view3>
-            <my-view404 name="view404"></my-view404>
+            <tq-browse name="browse"></tq-browse>
+            <tq-queue name="queue"></tq-queue>
+            <tq-setup name="setup"></tq-setup>
+            <tq-view404 name="view404"></tq-view404>
           </iron-pages>
         </app-header-layout>
       </app-drawer-layout>
@@ -140,12 +138,9 @@ class MyApp extends PolymerElement {
 
   _routePageChanged(page) {
      // Show the corresponding page according to the route.
-     //
-     // If no page was found in the route data, page will be an empty string.
-     // Show 'view1' in that case. And if the page doesn't exist, show 'view404'.
     if (!page) {
-      this.page = 'view1';
-    } else if (['view1', 'view2', 'view3'].indexOf(page) !== -1) {
+      this.page = 'browse';
+    } else if (['browse', 'queue', 'setup'].indexOf(page) !== -1) {
       this.page = page;
     } else {
       this.page = 'view404';
@@ -163,20 +158,20 @@ class MyApp extends PolymerElement {
     // Note: `polymer build` doesn't like string concatenation in the import
     // statement, so break it up.
     switch (page) {
-      case 'view1':
-        import('./my-view1.js');
+      case 'browse':
+        import('./tq-browse.js');
         break;
-      case 'view2':
-        import('./my-view2.js');
+      case 'queue':
+        import('./tq-queue.js');
         break;
-      case 'view3':
-        import('./my-view3.js');
+      case 'setup':
+        import('./tq-setup.js');
         break;
       case 'view404':
-        import('./my-view404.js');
+        import('./tq-view404.js');
         break;
     }
   }
 }
 
-window.customElements.define('my-app', MyApp);
+window.customElements.define('tq-app', TimelapseQueueApp);
