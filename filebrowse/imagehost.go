@@ -2,12 +2,12 @@ package filebrowse
 
 import (
 	"image"
-	"image/jpeg"
-	_ "image/png"
+	"io"
 	"net/http"
 	"os"
 
 	"github.com/nfnt/resize"
+	"github.com/pixiv/go-libjpeg/jpeg"
 )
 
 const (
@@ -29,17 +29,28 @@ func (h *ImageHost) writeImage(rel string, thumb bool, w http.ResponseWriter) er
 		return err
 	}
 
-	im, _, err := image.Decode(imf)
+	if !thumb {
+		_, err := io.Copy(w, imf)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+
+	// Downsample prior to resize.
+	r := image.Rectangle{
+		Min: image.Point{X: 0, Y: 0},
+		Max: image.Point{X: ThumbSize, Y: ThumbSize},
+	}
+	im, err := jpeg.Decode(imf, &jpeg.DecoderOptions{ScaleTarget: r})
 	if err != nil {
 		return err
 	}
 
-	if thumb {
-		im = resize.Thumbnail(ThumbSize, ThumbSize, im, resize.Bilinear)
-	}
+	im = resize.Thumbnail(ThumbSize, ThumbSize, im, resize.Bilinear)
 
 	w.Header().Set("Content-Type", "image/jpeg")
-	err = jpeg.Encode(w, im, nil)
+	err = jpeg.Encode(w, im, &jpeg.EncoderOptions{Quality: 90})
 	if err != nil {
 		return err
 	}
@@ -54,6 +65,7 @@ func (h *ImageHost) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	rel := r.Form.Get("path")
 	thumb := r.Form.Get("thumb") != ""
+	w.Header().Set("Content-Type", "image/jpeg")
 	if err := h.writeImage(rel, thumb, w); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
