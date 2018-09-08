@@ -61,6 +61,7 @@ func main() {
 	go func() {
 		log.Infof("Hosting web frontend on port %d", *port)
 		http.Handle("/filebrowser", fb)
+		http.HandleFunc("/timelapse", fb.ServeTimelapse)
 		http.Handle("/image", ih)
 		http.Handle("/log", lh)
 		http.Handle("/convert", engine)

@@ -235,3 +235,24 @@ func (f *FileBrowser) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(js)
 }
+
+func (f *FileBrowser) ServeTimelapse(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	p := r.Form.Get("path")
+	response, err := f.GetTimelapse(p)
+	if response == nil {
+		http.Error(w, "timelapse not found", http.StatusNotFound)
+		return
+	}
+
+	js, err := json.Marshal(response)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(js)
+}

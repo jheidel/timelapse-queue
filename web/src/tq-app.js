@@ -65,7 +65,7 @@ class TimelapseQueueApp extends PolymerElement {
 
       <app-location route="{{route}}" use-hash-as-path></app-location>
 
-      <app-route route="{{route}}" pattern="/:page" data="{{routeData}}" tail="{{subroute}}">
+      <app-route route="{{route}}" pattern="/:page" data="{{routeData}}" tail="{{subroute}}" query-params="{{queryParams}}">
       </app-route>
 
       <paper-toast id="toast"></paper-toast>
@@ -98,8 +98,8 @@ class TimelapseQueueApp extends PolymerElement {
 
           <iron-pages selected="[[page]]" attr-for-selected="name" role="main">
             <tq-browse name="browse"></tq-browse>
+            <tq-setup name="setup" path="[[queryParams.path]]"></tq-setup>
             <tq-queue name="queue"></tq-queue>
-            <tq-setup name="setup"></tq-setup>
             <tq-view404 name="view404"></tq-view404>
           </iron-pages>
         </app-header-layout>
@@ -115,6 +115,7 @@ class TimelapseQueueApp extends PolymerElement {
         observer: '_pageChanged'
       },
       routeData: Object,
+      queryParams: Object,
       subroute: Object
     };
   }
@@ -135,6 +136,12 @@ class TimelapseQueueApp extends PolymerElement {
   }
 
   _routePageChanged(page) {
+
+    console.log(this.routeData);
+    console.log(this.subroute);
+    console.log(this.queryParams);
+    console.log(this.page);
+
      // Show the corresponding page according to the route.
     if (!page) {
       this.page = 'browse';
@@ -143,6 +150,10 @@ class TimelapseQueueApp extends PolymerElement {
     } else {
       this.page = 'view404';
     }
+    
+          //if (this.page != 'setup') {
+          //        this.queryParams = {};
+          //}
 
     // Close a non-persistent drawer when the page & route are changed.
     if (!this.$.drawer.persistent) {

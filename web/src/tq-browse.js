@@ -4,13 +4,10 @@ import '@polymer/iron-ajax/iron-ajax.js';
 import '@polymer/paper-button/paper-button.js';
 import '@polymer/iron-icon/iron-icon.js';
 import '@polymer/iron-icons/iron-icons.js';
-import '@polymer/paper-spinner/paper-spinner.js';
-import Croppr from 'croppr/src/croppr.js';
 
 class Browse extends PolymerElement {
   static get template() {
     return html`
-      <link rel="stylesheet" href="../node_modules/croppr/src/css/croppr.css">
       <style include="shared-styles">
         :host {
           display: block;
@@ -31,9 +28,6 @@ class Browse extends PolymerElement {
         .timelapses paper-button {
           color: green;
         }
-        .cropbox {
-          max-width: 800px;
-        }
         .timelapse {
           padding: 5px;
           margin: 5px;
@@ -48,15 +42,6 @@ class Browse extends PolymerElement {
           handle-as="json"
           last-response="{{response}}"
           ></iron-ajax>
-      <iron-ajax
-          id="convert"
-          url="/convert"
-          method="POST"
-          handle-as="text"
-          on-response="onConvertSuccess_"
-          on-error="onConvertSuccess_"
-          ></iron-ajax>
-
       <div class="card">
         <div class="circle">1</div>
         <h1>Select a Timelapse</h1>
@@ -98,7 +83,7 @@ class Browse extends PolymerElement {
              </div>
              <div>[[item.Name]]</div>
              <div><span>[[item.Count]]</span> images (<span>[[item.DurationString]] @60fps</span>)</div>
-            <paper-button on-tap="_onSelectTimelapse">New Timelapse Job</paper-button>
+            <paper-button on-tap="_onSelectTimelapse" raised>New Timelapse Job</paper-button>
           </div>
           </template>
           <template is="dom-if" if="[[!response.Timelapses]]">
@@ -108,20 +93,6 @@ class Browse extends PolymerElement {
           </template>
         </div>
 
-        <hr>
-        <paper-spinner active="[[loading_]]"></paper-spinner>
-        <div>
-          <div class="cropbox">
-            <img id="croppr"/>
-          </div>
-          <div>
-            <span>x=[[crop.x]] y=[[crop.y]]</span>
-            <span>Size [[crop.width]]x[[crop.height]]</span>
-          </div>
-        </div>
-        <div>
-            <paper-button on-tap="onConvert_" raised>Start Job</paper-button>
-        </div>
       </div>
     `;
   }
@@ -135,55 +106,11 @@ class Browse extends PolymerElement {
   }
 
   _onSelectTimelapse(e) {
-      console.log(e);
-      console.log(e.model.item);
-      this.loading_ = true;
-      this.timelapse = e.model.item;
+      const timelapse = e.model.item;
 
-      this.$.croppr.src = '/image?path=' + this.timelapse.Path;
+      console.log(timelapse.Path);
 
-      // TODO set these based on job configuration.
-      const width = 1920;
-      const height = 1080;
-
-      this.croppr = new Croppr(this.$.croppr, {
-              aspectRatio: height / width,
-              startSize: [100, 100, '%'],
-              // TODO doesn't work when the canvas is scaled.
-              //minSize: [width, height, 'px'],
-              onCropMove: (value) => {
-                this.crop = value;
-              },
-              onInitialize: (instance) => {
-                this.crop = instance.getValue();
-                this.showSelect_ = true;
-                this.loading_ = false;
-              },
-      });
-  }
-
-  onConvert_(e) {
-    this.$.convert.headers={'content-type': 'application/x-www-form-urlencoded'};
-    this.$.convert.body = {
-      'path': this.timelapse.Path,
-      'x': this.crop.x,
-      'y': this.crop.y,
-      'width': this.crop.width,
-      'height': this.crop.height,
-    };
-    this.$.convert.generateRequest();
-  }
-
-  onConvertSuccess_(e) {
-    this.toast_("Job successfully queued.");
-  }
-
-  onConvertError_(e) {
-    this.toast_("Job creation failed: " + e.detail.request.xhr.response);
-  }
-
-  toast_(msg) {
-    this.dispatchEvent(new CustomEvent('toast', {detail: msg, bubbles: true, composed: true}));
+      window.location.href = '/?path=' + timelapse.Path + '#/setup';
   }
 
   static get properties() {
@@ -194,20 +121,6 @@ class Browse extends PolymerElement {
       },
       response: {
         type: Object,
-      },
-      crop: {
-        type: Object,
-      },
-      timelapse: {
-        type: Object,
-      },
-      showSelect_: {
-        type: Boolean,
-        value: false,
-      },
-      loading_: {
-        type: Boolean,
-        value: false,
       },
     };
   }
