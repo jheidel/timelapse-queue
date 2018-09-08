@@ -19,7 +19,7 @@ if ! [ -x "$(command -v polymer)" ]; then
   echo "Missing polymer CLI. https://www.polymer-project.org/3.0/start/install-3-0"
   exit 1
 fi
-(cd web && polymer build --js-minify --css-minify --html-minify)
+(cd web && make)
 
 # Generate bindata.go file from polymer output
 if ! [ -x "$(command -v go-bindata)" ]; then
@@ -27,7 +27,13 @@ if ! [ -x "$(command -v go-bindata)" ]; then
   echo "On ubuntu: sudo apt-get install go-bindata"
   exit 1
 fi
-go-bindata web/build/default/...
+
+if [ "$1" = "debug" ]; then
+  echo "Using go-bindata debug for refresh workflow."
+  go-bindata -debug web/build/default/...
+else
+  go-bindata web/build/default/...
+fi
 
 # Check for libjpeg-turbo (dependency of pixiv/go-libjpeg)
 ldconfig -p | grep libjpeg
