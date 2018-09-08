@@ -1,10 +1,12 @@
 package filebrowse
 
 import (
+	"fmt"
 	"image"
 	"io"
 	"net/http"
 	"os"
+	"strconv"
 
 	"github.com/nfnt/resize"
 	"github.com/pixiv/go-libjpeg/jpeg"
@@ -18,13 +20,26 @@ type ImageHost struct {
 	Browser *FileBrowser
 }
 
-func (h *ImageHost) writeImage(rel string, thumb bool, w http.ResponseWriter) error {
-	path, err := h.Browser.GetFullPath(rel)
+func (h *ImageHost) writeImage(rel string, idx string, thumb bool, w http.ResponseWriter) error {
+	var err error
+	i := 0
+	if idx != "" {
+		i, err = strconv.Atoi(idx)
+		if err != nil {
+			return err
+		}
+	}
+
+	t, err := h.Browser.GetTimelapse(rel)
 	if err != nil {
 		return err
 	}
 
-	imf, err := os.Open(path)
+	if i < 0 || i >= t.Count {
+		return fmt.Errorf("index out of timelapse range %d to %d", 0, t.Count-1)
+	}
+
+	imf, err := os.Open(t.GetPathForIndex(i))
 	if err != nil {
 		return err
 	}
@@ -64,9 +79,10 @@ func (h *ImageHost) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	rel := r.Form.Get("path")
+	idx := r.Form.Get("index")
 	thumb := r.Form.Get("thumb") != ""
 	w.Header().Set("Content-Type", "image/jpeg")
-	if err := h.writeImage(rel, thumb, w); err != nil {
+	if err := h.writeImage(rel, idx, thumb, w); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }

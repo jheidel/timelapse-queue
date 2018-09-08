@@ -49,11 +49,14 @@ func (t *Timelapse) GetFFmpegInputPath() string {
 	return t.GetOutputFullPath(base)
 }
 
-func (t *Timelapse) getImage(num int) (*image.RGBA, error) {
+func (t *Timelapse) GetPathForIndex(idx int) string {
 	basef := fmt.Sprintf("%s%%%02dd.%s", t.Prefix, t.NumLen, t.Ext)
-	base := fmt.Sprintf(basef, num)
+	base := fmt.Sprintf(basef, t.Start+idx)
+	return t.GetOutputFullPath(base)
+}
 
-	f, err := os.Open(t.GetOutputFullPath(base))
+func (t *Timelapse) getImage(num int) (*image.RGBA, error) {
+	f, err := os.Open(t.GetPathForIndex(num))
 	if err != nil {
 		return nil, err
 	}
@@ -74,7 +77,7 @@ func (t *Timelapse) Images() (<-chan *image.RGBA, chan error) {
 	go func() {
 		defer close(imagec)
 		defer close(errc)
-		for i := t.Start; i < t.Start+t.Count; i++ {
+		for i := 0; i < t.Count; i++ {
 			img, err := t.getImage(i)
 			if err != nil {
 				errc <- err
