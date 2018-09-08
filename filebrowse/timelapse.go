@@ -15,6 +15,8 @@ type Timelapse struct {
 	// The path to the first image in the sequence, relative to the file browser
 	// root. Useful to ID the timelapse.
 	Path string
+	// ParentPath is the path to the directory, relative to the file browser root.
+	ParentPath string
 	// The text component preceding the numbers.
 	Prefix string
 	// The file extension component.

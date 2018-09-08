@@ -41,7 +41,7 @@ class Setup extends PolymerElement {
           width: 85px;
 
         }
-        .cropinfo {
+        .helptext {
           color: gray;
           font-size: small;
         }
@@ -77,14 +77,22 @@ class Setup extends PolymerElement {
         </p>
 
         <p class="short-input">
-          <paper-input always-float-label label="Output Filename">
+          <paper-input
+                  label="Output Filename"
+                  value="{{filename_}}"
+                  always-float-label 
+                  auto-validate
+                  pattern="[a-zA-Z0-9-_ ]+"
+                  error-message="Not a valid filename"
+                  >
             <span slot="suffix">.mp4</span>
           </paper-input>
         </p>
 
         <p>
-          <div>Output Format</div>
-          <div>MP4 1920x1080 60fps</div>
+          <div>Output File</div>
+          <div class="helptext">MP4 1920x1080 60fps</div>
+          <div class="helptext" hidden$="[[!filename_]]">[[timelapse.ParentPath]][[filename_]].mp4</div>
         </p>
 
         <p>
@@ -120,7 +128,7 @@ class Setup extends PolymerElement {
           <div class="constrain-width">
             <img class="constrain-width" id="croppr"/>
           </div>
-          <div class="cropinfo">
+          <div class="helptext">
             <span>x=[[crop.x]] y=[[crop.y]]</span>
             <span>Size [[crop.width]]x[[crop.height]]</span>
           </div>
@@ -254,6 +262,9 @@ class Setup extends PolymerElement {
       stack_: {
         type: Boolean,
         value: false,
+      },
+      filename_: {
+        type: String,
       },
       startFrame_: {
         type: Number,
