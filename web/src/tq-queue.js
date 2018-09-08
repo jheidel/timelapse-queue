@@ -82,6 +82,11 @@ class Queue extends PolymerElement {
               </div>
             </div>
           </template>
+          <template is="dom-if" if="[[!response.Queue]]">
+          <div class="emptystate">
+            <span>No timelapse jobs queued. Add a timelapse job to start.</span>
+          </div>
+          </template>
         </div>
       </div>
     `;

@@ -21,16 +21,23 @@ class Browse extends PolymerElement {
           flex-wrap: wrap;
         }
         .parents paper-button {
-          color: red;
+          color: purple;
+          text-transform: none;
         }
         .dirs paper-button {
-          color: green;
+          color: blue;
+          text-transform: none;
         }
         .timelapses paper-button {
-          color: blue;
+          color: green;
         }
         .cropbox {
           max-width: 800px;
+        }
+        .timelapse {
+          padding: 5px;
+          margin: 5px;
+          background: #f5f5f5;
         }
       </style>
 
@@ -52,12 +59,13 @@ class Browse extends PolymerElement {
 
       <div class="card">
         <div class="circle">1</div>
-        <h1>Select a timelapse</h1>
+        <h1>Select a Timelapse</h1>
         <div class="files parents">
           <template is="dom-repeat" items="[[response.Parents]]">
           <div>
            <paper-button on-tap="_onDir">
              <iron-icon icon="arrow-back"></iron-icon>
+             <iron-icon icon="folder"></iron-icon>
              [[item.Name]]
            </paper-button>
           </div>
@@ -73,22 +81,32 @@ class Browse extends PolymerElement {
            </paper-button>
           </div>
           </template>
+          <template is="dom-if" if="[[!response.Dirs]]">
+          <div class="emptystate">
+            <span>No more directories.</span>
+          </div>
+          </template>
         </div>
         <hr>
         <div class="files timelapses">
           <template is="dom-repeat" items="[[response.Timelapses]]">
-          <div>
+          <div class="timelapse">
              <div>
               <a href="/image?path=[[item.Path]]" target="_blank">
                <img src="/image?path=[[item.Path]]&thumb=true" alt="[[item.Name]]">
               </a>
              </div>
-             <div><span>[[item.Count]]</span> images (<span>[[item.DurationString]]</span>)</div>
-            <paper-button on-tap="_onSelectTimelapse">[[item.Name]]</paper-button>
+             <div>[[item.Name]]</div>
+             <div><span>[[item.Count]]</span> images (<span>[[item.DurationString]] @60fps</span>)</div>
+            <paper-button on-tap="_onSelectTimelapse">New Timelapse Job</paper-button>
+          </div>
+          </template>
+          <template is="dom-if" if="[[!response.Timelapses]]">
+          <div class="emptystate">
+            <span>No timelapses in this directory.</span>
           </div>
           </template>
         </div>
-
 
         <hr>
         <paper-spinner active="[[loading_]]"></paper-spinner>

@@ -13,10 +13,9 @@ class Setup extends PolymerElement {
       </style>
 
       <div class="card">
-        <div class="circle">3</div>
-        <h1>View Three</h1>
-        <p>Modus commodo minimum eum te, vero utinam assueverit per eu.</p>
-        <p>Ea duis bonorum nec, falli paulo aliquid ei eum.Has at minim mucius aliquam, est id tempor laoreet.Pro saepe pertinax ei, ad pri animal labores suscipiantur.</p>
+        <div class="circle">2</div>
+        <h1>Configure Timelapse Job</h1>
+        <p>TODO TODO TODO<p>
       </div>
     `;
   }

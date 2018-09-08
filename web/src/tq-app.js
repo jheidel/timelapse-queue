@@ -131,8 +131,6 @@ class TimelapseQueueApp extends PolymerElement {
   }
 
   _onToast(e) {
-          console.log('received');
-    console.log(e);
           this.$.toast.show(e.detail);
   }
 
@@ -153,6 +151,8 @@ class TimelapseQueueApp extends PolymerElement {
   }
 
   _pageChanged(page) {
+    this.set('routeData.page', page);
+
     // Import the page component on demand.
     //
     // Note: `polymer build` doesn't like string concatenation in the import

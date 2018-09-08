@@ -26,7 +26,10 @@ const (
 var (
 	timelapseRE = regexp.MustCompile(`^([^\d]*)(\d+)\.(\w+)$`)
 
-	allowedEXT = []string{"jpg", "png"}
+	// Hide the following files & folders from results
+	excludeRE = regexp.MustCompile(`^\..*`)
+
+	allowedEXT = []string{"jpg", "jpeg"}
 )
 
 type FileBrowser struct {
@@ -120,6 +123,9 @@ func (f *FileBrowser) listPath(p string) (*Response, error) {
 
 	// Generate list of directories and timelapse files.
 	for _, finfo := range files {
+		if excludeRE.MatchString(finfo.Name()) {
+			continue // Not an interesting file or directory.
+		}
 		rel, err := filepath.Rel(root, filepath.Join(b, finfo.Name()))
 		if err != nil {
 			return nil, err
