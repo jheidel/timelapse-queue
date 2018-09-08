@@ -26,8 +26,11 @@ var (
 func Convert(pctx context.Context, config Config, timelapse *filebrowse.Timelapse, progress chan<- int) error {
 	defer close(progress)
 
-	if false {
-		defer profile.Start().Stop()
+	// TODO condition this on config.
+	if true {
+		p := profile.ProfilePath(timelapse.GetOutputFullPath("profiles"))
+		//defer profile.Start(profile.MemProfile, p).Stop()
+		defer profile.Start(p).Stop()
 	}
 
 	ctx, cancelf := context.WithCancel(pctx)
@@ -60,6 +63,12 @@ func Convert(pctx context.Context, config Config, timelapse *filebrowse.Timelaps
 		Size: image.Point{X: 1920, Y: 1080},
 	}
 	imagec, imerrc = resizer.Process(imagec, imerrc)
+
+	stacker := process.Stacker{
+		Overlap: 60,
+		Merger:  &process.Lighten{},
+	}
+	imagec, imerrc = stacker.Process(imagec, imerrc)
 
 	// Pull a sample image from the stream (to build config)
 	var sample *image.RGBA
