@@ -2,6 +2,8 @@ package process
 
 import (
 	"image"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type Stacker struct {
@@ -30,29 +32,36 @@ func (l *Lighten) Blend(img1, img2 *image.RGBA) *image.RGBA {
 }
 
 // BEFORE: 19 minutes for merge of 60
-func (s *Stacker) stack(imgs []*image.RGBA) *image.RGBA {
-	m := imgs[0]
-	for _, v := range imgs[1:] {
-		m = s.Merger.Blend(m, v)
-	}
-	return m
-}
 
 func (s *Stacker) Process(inc <-chan *image.RGBA, errc chan error) (<-chan *image.RGBA, chan error) {
 	outc := make(chan *image.RGBA)
 	go func() {
 		defer close(outc)
 
-		// TODO support buffer
-		hist := []*image.RGBA{}
+		buf := &Buffer{}
+		frame := 0
+		window := []int{}
 
 		for img := range inc {
-			hist = append(hist, img)
-			if len(hist) > s.Overlap {
-				hist = hist[1:]
+			buf.Add(frame, img)
+
+			window = append(window, frame)
+			if len(window) > s.Overlap {
+				buf.RemoveOld(window[0])
+				window = window[1:]
 			}
-			outc <- s.stack(hist)
+
+			outc <- buf.Generate(window, s.Merger)
+			frame += 1
 		}
+
+		for len(window) > 1 {
+			buf.RemoveOld(window[0])
+			window = window[1:]
+			outc <- buf.Generate(window, s.Merger)
+		}
+
+		log.Infof("stacker exit")
 	}()
 	return outc, errc
 }

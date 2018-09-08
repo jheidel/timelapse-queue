@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"runtime"
 	"strconv"
 	"time"
 
@@ -155,6 +156,11 @@ func (q *JobQueue) markJobDone(err error) {
 	q.current = nil
 
 	log.Infof("job completed")
+
+	// Ensure we run a GC cycle before running the next job.
+	// There are probably heap fragmentation issues that are causing more problems...
+	runtime.GC()
+	log.Infof("gc complete")
 }
 
 func (q *JobQueue) AddJob(config Config, t *filebrowse.Timelapse) {

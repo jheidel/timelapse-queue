@@ -29,8 +29,8 @@ func Convert(pctx context.Context, config Config, timelapse *filebrowse.Timelaps
 	// TODO condition this on config.
 	if true {
 		p := profile.ProfilePath(timelapse.GetOutputFullPath("profiles"))
-		//defer profile.Start(profile.MemProfile, p).Stop()
-		defer profile.Start(p).Stop()
+		defer profile.Start(profile.MemProfile, p).Stop()
+		//defer profile.Start(p).Stop()
 	}
 
 	ctx, cancelf := context.WithCancel(pctx)

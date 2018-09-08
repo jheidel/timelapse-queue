@@ -5,6 +5,9 @@ import (
 	"sort"
 )
 
+// Caches past image merges in order to significantly speed up overlap merging.
+// Assumes all image merge operations are commutative.
+
 type BufferItem struct {
 	// The input frames that are combined to make this frame, ordered.
 	Frames []int
