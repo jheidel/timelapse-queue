@@ -48,6 +48,10 @@ class Setup extends PolymerElement {
         .startbutton {
           padding-top: 20px;
         }
+        .error {
+          color: red;
+          padding-bottom: 15px;
+        }
       </style>
 
       <iron-ajax
@@ -56,7 +60,7 @@ class Setup extends PolymerElement {
           method="POST"
           handle-as="text"
           on-response="onConvertSuccess_"
-          on-error="onConvertSuccess_"
+          on-error="onConvertError_"
           ></iron-ajax>
       <iron-ajax
           id="timelapseajax"
@@ -148,7 +152,7 @@ class Setup extends PolymerElement {
                                 type="number"
                                 min="1"
                                 max="[[timelapse.Count]]"
-                                value="60"
+                                value="{{stackWindow_}}"
                                 always-float-label></paper-input>
                     
                   </div>
@@ -156,7 +160,25 @@ class Setup extends PolymerElement {
           </div>
         </p>
 
+        <p>
+          <div>Advanced Options</div>
+          <div>
+                  <paper-checkbox id="profilecpu">
+                    CPU Profiling
+                  </paper-checkbox>
+          </div>
+          <div>
+                  <paper-checkbox id="profilemem">
+                    Memory Profiling
+                  </paper-checkbox>
+          </div>
+        </p>
+
         <div class="startbutton">
+            <div class="error" hidden$="[[!error_]]">
+              <iron-icon icon="error"></iron-icon>
+              [[error_]]
+            </div>
             <paper-button on-tap="onConvert_" raised>
                    <iron-icon icon="schedule"></iron-icon>
                   Add Timelapse Job to Queue
@@ -224,9 +246,16 @@ class Setup extends PolymerElement {
       'OutputName': this.filename_,
       'StartFrame': this.startFrame_,
       'EndFrame': this.endFrame_,
-      // TODO stacking
-      // TODO profiling modes
+      'Stack': this.stack_,
+      'StackWindow': parseInt(this.stackWindow_, 10),
     };
+    if (this.$.profilecpu.checked) {
+      config['ProfileCPU'] = true;
+    }
+    if (this.$.profilemem.checked) {
+      config['ProfileMem'] = true;
+    }
+
     this.$.convertajax.body = {
         'request': JSON.stringify(config),
     };
@@ -235,10 +264,13 @@ class Setup extends PolymerElement {
 
   onConvertSuccess_(e) {
     this.toast_("Job successfully queued.");
+    this.error_ = "";
+    // TODO redirect to queue.
   }
 
   onConvertError_(e) {
-    this.toast_("Job creation failed: " + e.detail.request.xhr.response);
+    this.toast_("Job creation failed."); 
+    this.error_ = e.detail.request.xhr.response;
   }
 
   toast_(msg) {
@@ -279,9 +311,17 @@ class Setup extends PolymerElement {
         type: Number,
         observer: 'onFrame_',
       },
+      stackWindow_: {
+        type: Number,
+        value: 60,
+      },
       muteObservers_: {
         type: Boolean,
         observer: false,
+      },
+      error_: {
+        type: String,
+        value: "",
       },
     };
   }

@@ -6,10 +6,10 @@ import (
 	"image"
 	"time"
 
-	log "github.com/sirupsen/logrus"
 	"timelapse-queue/filebrowse"
 )
 
+// TODO not a huge fan of this interface being here...
 type Config interface {
 	// The basename for the output timelapse.
 	GetFilename() string
@@ -22,13 +22,29 @@ type Config interface {
 
 	// Gets the expected number of output frames in the sequence (to compute progress)
 	GetExpectedFrames() int
+
+	// Get convert options
+	GetConvertOptions() *ConvertOptions
 }
 
 type baseConfig struct {
-	Path                 string
-	X, Y, Width, Height  int
-	OutputName           string
-	StartFrame, EndFrame int
+	Path                   string
+	X, Y, Width, Height    int
+	OutputName             string
+	StartFrame, EndFrame   int
+	ProfileCPU, ProfileMem bool
+
+	Stack       bool
+	StackWindow int
+}
+
+func (f *baseConfig) GetConvertOptions() *ConvertOptions {
+	return &ConvertOptions{
+		Stack:       f.Stack,
+		StackWindow: f.StackWindow,
+		ProfileCPU:  f.ProfileCPU,
+		ProfileMem:  f.ProfileMem,
+	}
 }
 
 func (f *baseConfig) GetRegion() image.Rectangle {
@@ -73,21 +89,29 @@ func (f *baseConfig) Validate(ctx context.Context, t *filebrowse.Timelapse) erro
 
 	r := f.GetRegion()
 	if r.Dx() < 1920 || r.Dy() < 1080 {
-		return fmt.Errorf("Image must be at least 1920x1080")
+		return fmt.Errorf("selected region must be at least 1920x1080")
 	}
-
 	ir, err := getSampleImageBounds(ctx, t, f.StartFrame)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to load sample frame: %v", err)
 	}
-
-	log.Infof("Region is %v image is %v", r, ir)
 
 	if !(r.Min.X >= ir.Min.X && r.Min.Y >= ir.Min.Y &&
 		r.Min.X <= ir.Max.X && r.Min.Y <= ir.Max.Y &&
 		r.Max.X >= ir.Min.X && r.Max.Y >= ir.Min.Y &&
 		r.Max.X <= ir.Max.X && r.Max.Y <= ir.Max.Y) {
 		return fmt.Errorf("crop rectangle out of bounds of source image")
+	}
+
+	if f.ProfileCPU && f.ProfileMem {
+		return fmt.Errorf("only one profile mode at a time is supported")
+	}
+
+	if f.Stack {
+		smax := (f.EndFrame - f.StartFrame + 1)
+		if f.StackWindow < 1 || f.StackWindow > smax {
+			return fmt.Errorf("stacking window out of range 1..%d", smax)
+		}
 	}
 	return nil
 }
@@ -105,5 +129,10 @@ func (f *baseConfig) GetStartEnd() (int, int) {
 }
 
 func (f *baseConfig) GetExpectedFrames() int {
-	return f.EndFrame + 1 - f.StartFrame
+	frames := f.EndFrame + 1 - f.StartFrame
+	if f.Stack {
+		// Stacking will add additonal frames to the output.
+		frames += f.StackWindow
+	}
+	return frames
 }

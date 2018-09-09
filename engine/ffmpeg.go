@@ -23,14 +23,22 @@ var (
 	progressRE = regexp.MustCompile(`frame=\s*(\d+)`)
 )
 
+type ConvertOptions struct {
+	ProfileCPU, ProfileMem bool
+	Stack                  bool
+	StackWindow            int
+}
+
 func Convert(pctx context.Context, config Config, timelapse *filebrowse.Timelapse, progress chan<- int) error {
 	defer close(progress)
+	opts := config.GetConvertOptions()
 
-	// TODO condition this on config.
-	if true {
-		p := profile.ProfilePath(timelapse.GetOutputFullPath("profiles"))
-		defer profile.Start(profile.MemProfile, p).Stop()
-		//defer profile.Start(p).Stop()
+	profilepath := profile.ProfilePath(timelapse.GetOutputFullPath("profiles"))
+	if opts.ProfileCPU {
+		defer profile.Start(profilepath).Stop()
+	}
+	if opts.ProfileMem {
+		defer profile.Start(profile.MemProfile, profilepath).Stop()
 	}
 
 	ctx, cancelf := context.WithCancel(pctx)
@@ -65,11 +73,13 @@ func Convert(pctx context.Context, config Config, timelapse *filebrowse.Timelaps
 	}
 	imagec, imerrc = resizer.Process(imagec, imerrc)
 
-	stacker := process.Stacker{
-		Overlap: 60,
-		Merger:  &process.Lighten{},
+	if opts.Stack {
+		stacker := process.Stacker{
+			Overlap: opts.StackWindow,
+			Merger:  &process.Lighten{},
+		}
+		imagec, imerrc = stacker.Process(imagec, imerrc)
 	}
-	imagec, imerrc = stacker.Process(imagec, imerrc)
 
 	// Pull a sample image from the stream (to build config)
 	var sample *image.RGBA
@@ -104,7 +114,7 @@ func Convert(pctx context.Context, config Config, timelapse *filebrowse.Timelaps
 		"-crf", "17",
 		"-s", fmt.Sprintf("%dx%d", sample.Rect.Max.X, sample.Rect.Max.Y),
 		"-progress", "/dev/stdout",
-		timelapse.GetOutputFullPath("1080p-test.mp4"),
+		timelapse.GetOutputFullPath(config.GetFilename()),
 	}
 
 	cmd := exec.Command(util.LocateFFmpegOrDie(), args...)

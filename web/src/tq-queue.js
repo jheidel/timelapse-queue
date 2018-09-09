@@ -27,6 +27,9 @@ class Queue extends PolymerElement {
         .queue-active {
           background: #FFFFCC;
         }
+        .queue-cancel {
+          background: #FFFFCC;
+        }
         .queue-done {
           background: #CCFFCC;
         }
@@ -61,8 +64,7 @@ class Queue extends PolymerElement {
               <div>
                   <div>[[item.Config.OutputName]].mp4</div>
                   <div>[[item.Timelapse.Name]]</div>
-                  <div>[[item.Timelapse.Count]] images</div>
-                  <div>[[item.Timelapse.DurationString]]</div>
+                  <div>[[getFrames_(item)]] images</div>
               </div>
               <div>
                   <paper-progress value="[[item.Progress]]"></paper-progress>
@@ -73,17 +75,17 @@ class Queue extends PolymerElement {
                   <div hidden$="[[!item.ElapsedString]]">[[item.ElapsedString]]</div>
               </div>
               <div hidden$="[[!isState_(item, 'active')]]">
-                  <paper-button data-jobid$="[[item.ID]]" data-url="/queue-cancel" on-tap="onOp_" raised>Cancel</paper-button>
+                  <paper-button data-jobid$="[[item.ID]]" data-url="/queue-cancel" data-opname="cancel" on-tap="onOp_" raised>Cancel</paper-button>
               </div>
-              <div hidden$="[[isState_(item, 'active')]]">
-                  <paper-button data-jobid$="[[item.ID]]" data-url="/queue-remove" on-tap="onOp_" raised>Remove</paper-button>
+              <div hidden$="[[isState_(item, 'active', 'cancel')]]">
+                  <paper-button data-jobid$="[[item.ID]]" data-url="/queue-remove" data-opname="remove" on-tap="onOp_" raised>Remove</paper-button>
               </div>
               <div hidden$="[[!item.LogPath]]">
                 <a href="/log?path=[[item.LogPath]]" target="_blank">Log</a>
               </div>
             </div>
           </template>
-          <template is="dom-if" if="[[!response.Queue]]">
+          <template is="dom-if" if="[[isEmpty_(response.Queue)]]">
           <div class="emptystate">
             <span>No timelapse jobs queued. Add a timelapse job to start.</span>
           </div>
@@ -93,31 +95,46 @@ class Queue extends PolymerElement {
     `;
   }
 
+  isEmpty_(q) {
+    return !q || q.length == 0;
+  }
+
+  getFrames_(item) {
+    if (!item) {
+      return 0;
+    }
+    return item.Config.EndFrame - item.Config.StartFrame + 1;
+  }
+
   onResponse_(e) {
     this.response = e.detail.response;
     // Poll again after short delay.
     setTimeout(() => this.$.fetch.generateRequest(), 1500);
   }
 
-  isState_(j, state) {
-    return !!j && j.State === state;
+  isState_(j, ...states) {
+    return !!j && states.some(s => j.State === s);
   }
 
   onOp_(e) {
     const jobid = e.target.dataset.jobid;
     const url = e.target.dataset.url;
+    this.opName_ = e.target.dataset.opname;
     this.$.op.url = url;
     this.$.op.headers={'content-type': 'application/x-www-form-urlencoded'};
     this.$.op.body = {'id': jobid};
     this.$.op.generateRequest();
+
+    // Force a state refresh.
+    this.$.fetch.generateRequest();
   }
 
   onOpSuccess_(e) {
-    this.toast_("Job change request succeeded.");
+    this.toast_("Job " + this.opName_ + " succeeded.");
   }
 
   onOpError_(e) {
-    this.toast_("Job change request failed: " + e.detail.request.xhr.response);
+    this.toast_("Failed to " + this.opName_ + " job: " + e.detail.request.xhr.response);
   }
 
   toast_(msg) {
@@ -128,6 +145,9 @@ class Queue extends PolymerElement {
     return {
       response: {
         type: Object,
+      },
+      opName_: {
+        type: String,
       },
     };
   }

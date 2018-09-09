@@ -20,6 +20,7 @@ const (
 	StatePending = jobState("pending")
 	StateActive  = jobState("active")
 	StateDone    = jobState("done")
+	StateCancel  = jobState("cancel")
 	StateFailed  = jobState("failed")
 )
 
@@ -107,12 +108,16 @@ func (q *JobQueue) cancelJob(ID int) error {
 		return fmt.Errorf("job %v not found", ID)
 	}
 
+	if j.State != StateActive {
+		return fmt.Errorf("job not in active state and cannot be canceled")
+	}
 	if j.cancelf == nil {
 		return fmt.Errorf("job not running or already canceled")
 	}
 
 	j.cancelf()
 	j.cancelf = nil
+	j.State = StateCancel
 	return nil
 }
 
