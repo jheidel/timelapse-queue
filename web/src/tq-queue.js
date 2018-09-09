@@ -53,8 +53,7 @@ class Queue extends PolymerElement {
           ></iron-ajax>
 
       <div class="card">
-        <div class="circle">2</div>
-        <h1>Process Queue</h1>
+        <h1>Timelapse Process Queue</h1>
         <div>
           <template is="dom-repeat" items="[[response.Queue]]">
             <div class$="queue-item queue-[[item.State]]">

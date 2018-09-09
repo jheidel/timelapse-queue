@@ -106,11 +106,12 @@ class Browse extends PolymerElement {
   }
 
   _onSelectTimelapse(e) {
-      const timelapse = e.model.item;
-
-      console.log(timelapse.Path);
-
-      window.location.href = '/?path=' + timelapse.Path + '#/setup';
+    const timelapse = e.model.item;
+    const path = '/?path=' + timelapse.Path + '#/setup';
+   
+    // Forces a browse state refresh but that's a good thing here to avoid
+    // polution of the setup state.
+    window.location.href = path;
   }
 
   static get properties() {

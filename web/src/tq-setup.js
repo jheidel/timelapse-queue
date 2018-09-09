@@ -88,6 +88,7 @@ class Setup extends PolymerElement {
                   auto-validate
                   pattern="[a-zA-Z0-9-_ ]+"
                   error-message="Not a valid filename"
+                  autofocus
                   >
             <span slot="suffix">.mp4</span>
           </paper-input>
@@ -102,7 +103,7 @@ class Setup extends PolymerElement {
         <p>
         <div class="slider">
           <span>Start Frame</span>
-          <paper-slider min="0" max="[[getLastFrame_(timelapse)]]" value="{{startFrame_}}" pin></paper-slider>
+         <paper-slider min="0" max="[[getLastFrame_(timelapse)]]" value="{{startFrame_}}" pin></paper-slider>
           <paper-input
                 type="number"
                 min="0"
@@ -129,8 +130,7 @@ class Setup extends PolymerElement {
           <div hidden$="[[!loading_]]">
               <paper-spinner active="[[loading_]]"></paper-spinner>
           </div>
-          <div class="constrain-width">
-            <img class="constrain-width" id="croppr"/>
+          <div class="constrain-width" id="container">
           </div>
           <div class="helptext">
             <span>x=[[crop.x]] y=[[crop.y]]</span>
@@ -189,20 +189,21 @@ class Setup extends PolymerElement {
   }
 
   onFrame_(frame) {
-      if (!this.croppr || this.muteObservers_) {
+      if (!this.croppr || !this.enableObservers_) {
           return;
       }
       this.croppr.setImage('/image?path=' + this.path + '&index=' + frame);
   }
 
   getLastFrame_(tl) {
+          if (!tl) {
+                  return 0;
+          }
           return tl.Count - 1;
   }
 
   onTimelapse_(tl) {
-    this.muteObservers_ = true;
     this.endFrame_ = this.getLastFrame_(tl);
-    this.muteObservers_ = false;
   }
 
   getParams_(path) {
@@ -210,14 +211,31 @@ class Setup extends PolymerElement {
   }
 
   onPath_(path) {
+      if (!path) {
+              return
+      }
+
       this.loading_ = true;
-      this.$.croppr.src = '/image?path=' + path;
+
+      const container = this.$.container;
+      // Remove any existing elements left behind by croppr.
+      while (container.firstChild) {
+              container.removeChild(container.firstChild);
+      }
+
+      // Add new image.
+      const img = document.createElement('img');
+      img.classList.add("constrain-width");
+      img.src = '/image?path=' + path;
+      container.appendChild(img);
+
+      //this.$.croppr.src = '/image?path=' + path;
 
       // TODO set these based on job configuration.
       const width = 1920;
       const height = 1080;
 
-      this.croppr = new Croppr(this.$.croppr, {
+      this.croppr = new Croppr(img, {
               aspectRatio: height / width,
               startSize: [100, 100, '%'],
               // TODO doesn't work when the canvas is scaled.
@@ -231,6 +249,7 @@ class Setup extends PolymerElement {
               onInitialize: (instance) => {
                 this.crop = instance.getValue();
                 this.loading_ = false;
+                this.enableObservers_ = true;
               },
       });
   }     
@@ -263,9 +282,13 @@ class Setup extends PolymerElement {
   }
 
   onConvertSuccess_(e) {
+    // Redirect to queue to see the new job.
+    window.history.pushState({}, null, '/#/queue');
+    window.dispatchEvent(new CustomEvent('location-changed'));
+
     this.toast_("Job successfully queued.");
     this.error_ = "";
-    // TODO redirect to queue.
+    this.filename_ = "";
   }
 
   onConvertError_(e) {
@@ -315,7 +338,7 @@ class Setup extends PolymerElement {
         type: Number,
         value: 60,
       },
-      muteObservers_: {
+      enableObservers_: {
         type: Boolean,
         observer: false,
       },

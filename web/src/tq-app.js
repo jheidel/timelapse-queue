@@ -17,6 +17,8 @@ import '@polymer/paper-icon-button/paper-icon-button.js';
 import '@polymer/paper-item/paper-icon-item.js';
 import './tq-icons.js';
 
+import('./tq-queue.js');
+
 // Gesture events like tap and track generated from touch will not be
 // preventable, allowing for better scrolling performance.
 setPassiveTouchGestures(true);
@@ -136,6 +138,7 @@ class TimelapseQueueApp extends PolymerElement {
   }
 
   _routePageChanged(page) {
+    console.log('route change updated');
 
     console.log(this.routeData);
     console.log(this.subroute);
@@ -145,16 +148,14 @@ class TimelapseQueueApp extends PolymerElement {
      // Show the corresponding page according to the route.
     if (!page) {
       this.page = 'browse';
+      window.history.pushState({}, null, '/#/browse');
+      window.dispatchEvent(new CustomEvent('location-changed'));
     } else if (['browse', 'queue', 'setup'].indexOf(page) !== -1) {
       this.page = page;
     } else {
       this.page = 'view404';
     }
     
-          //if (this.page != 'setup') {
-          //        this.queryParams = {};
-          //}
-
     // Close a non-persistent drawer when the page & route are changed.
     if (!this.$.drawer.persistent) {
       this.$.drawer.close();
@@ -162,12 +163,16 @@ class TimelapseQueueApp extends PolymerElement {
   }
 
   _pageChanged(page) {
+    console.log('page changed');
+
     this.set('routeData.page', page);
 
-    // Import the page component on demand.
-    //
-    // Note: `polymer build` doesn't like string concatenation in the import
-    // statement, so break it up.
+
+    window.dispatchEvent(new CustomEvent('location-changed'));
+    // 
+
+    // Dynamically import nodes as we navigate to them.
+    // This kind of works I guess?
     switch (page) {
       case 'browse':
         import('./tq-browse.js');
