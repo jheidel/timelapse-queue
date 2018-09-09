@@ -1,5 +1,6 @@
 import { PolymerElement, html } from '@polymer/polymer/polymer-element.js';
 import './shared-styles.js';
+import '@polymer/iron-ajax/iron-ajax.js';
 import '@polymer/paper-progress/paper-progress.js';
 import '@polymer/paper-button/paper-button.js';
 
@@ -105,10 +106,13 @@ class Queue extends PolymerElement {
     return item.Config.EndFrame - item.Config.StartFrame + 1;
   }
 
+  ready() {
+    super.ready();
+    setInterval(() => this.$.fetch.generateRequest(), 1500);
+  }
+
   onResponse_(e) {
     this.response = e.detail.response;
-    // Poll again after short delay.
-    setTimeout(() => this.$.fetch.generateRequest(), 1500);
   }
 
   isState_(j, ...states) {
