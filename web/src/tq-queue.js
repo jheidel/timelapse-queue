@@ -59,6 +59,7 @@ class Queue extends PolymerElement {
                <img src="/image?path=[[item.Timelapse.Path]]&thumb=true">
               </div>
               <div>
+                  <div>[[item.Config.OutputName]].mp4</div>
                   <div>[[item.Timelapse.Name]]</div>
                   <div>[[item.Timelapse.Count]] images</div>
                   <div>[[item.Timelapse.DurationString]]</div>

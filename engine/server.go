@@ -1,11 +1,11 @@
 package engine
 
 import (
-	"image"
+	"encoding/json"
 	"net/http"
-	"net/url"
-	"strconv"
 
+	"github.com/davecgh/go-spew/spew"
+	log "github.com/sirupsen/logrus"
 	"timelapse-queue/filebrowse"
 )
 
@@ -14,64 +14,32 @@ type TestServer struct {
 	Queue   *JobQueue
 }
 
-func parseBounds(values url.Values) (image.Rectangle, error) {
-	x, err := strconv.Atoi(values.Get("x"))
-	if err != nil {
-		return image.Rectangle{}, err
-	}
-	y, err := strconv.Atoi(values.Get("y"))
-	if err != nil {
-		return image.Rectangle{}, err
-	}
-	width, err := strconv.Atoi(values.Get("width"))
-	if err != nil {
-		return image.Rectangle{}, err
-	}
-	height, err := strconv.Atoi(values.Get("height"))
-	if err != nil {
-		return image.Rectangle{}, err
-	}
-	rect := image.Rectangle{
-		Min: image.Point{
-			X: x,
-			Y: y,
-		},
-		Max: image.Point{
-			X: x + width,
-			Y: y + height,
-		},
-	}
-	return rect, nil
-}
-
 func (s *TestServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		http.Error(w, "Requires POST", http.StatusBadRequest)
 		return
 	}
+
 	if err := r.ParseForm(); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	rel := r.Form.Get("path")
-	t, err := s.Browser.GetTimelapse(rel)
+	config := &baseConfig{}
+	if err := json.Unmarshal([]byte(r.Form.Get("request")), config); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	log.Infof("Received conversion request: %+v", spew.Sdump(config))
+
+	t, err := s.Browser.GetTimelapse(config.Path)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
 
-	b, err := parseBounds(r.Form)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	config := &configFake{
-		Region: b,
-	}
-
-	if err := config.Validate(t); err != nil {
+	if err := config.Validate(r.Context(), t); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}

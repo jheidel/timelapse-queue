@@ -1,6 +1,7 @@
 package filebrowse
 
 import (
+	"context"
 	"fmt"
 	"image"
 	"os"
@@ -73,16 +74,23 @@ func (t *Timelapse) getImage(num int) (*image.RGBA, error) {
 }
 
 // Images produces a stream of images for this timelapse.
-func (t *Timelapse) Images() (<-chan *image.RGBA, chan error) {
+// Optionally supply non-zero start & end for bounded timelapse.
+func (t *Timelapse) Images(ctx context.Context, start, end int) (<-chan *image.RGBA, chan error) {
 	errc := make(chan error, 1)
 	imagec := make(chan *image.RGBA)
 	go func() {
 		defer close(imagec)
 		defer close(errc)
-		for i := 0; i < t.Count; i++ {
+		if end == 0 {
+			end = t.Count - 1
+		}
+		for i := start; i <= end; i++ {
 			img, err := t.getImage(i)
 			if err != nil {
 				errc <- err
+				return
+			}
+			if ctx.Err() != nil {
 				return
 			}
 			imagec <- img

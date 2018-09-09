@@ -214,16 +214,21 @@ class Setup extends PolymerElement {
   }     
   
   onConvert_(e) {
-
-    // TODO
-
     this.$.convertajax.headers={'content-type': 'application/x-www-form-urlencoded'};
+    const config = {
+      'Path': this.timelapse.Path,
+      'X': this.crop.x,
+      'Y': this.crop.y,
+      'Width': this.crop.width,
+      'Height': this.crop.height,
+      'OutputName': this.filename_,
+      'StartFrame': this.startFrame_,
+      'EndFrame': this.endFrame_,
+      // TODO stacking
+      // TODO profiling modes
+    };
     this.$.convertajax.body = {
-      'path': this.timelapse.Path,
-      'x': this.crop.x,
-      'y': this.crop.y,
-      'width': this.crop.width,
-      'height': this.crop.height,
+        'request': JSON.stringify(config),
     };
     this.$.convertajax.generateRequest();
   }

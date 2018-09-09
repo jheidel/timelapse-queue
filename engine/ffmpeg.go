@@ -35,7 +35,7 @@ func Convert(pctx context.Context, config Config, timelapse *filebrowse.Timelaps
 
 	ctx, cancelf := context.WithCancel(pctx)
 
-	logf, err := os.Create(config.GetDebugFullPath(timelapse))
+	logf, err := os.Create(timelapse.GetOutputFullPath(config.GetDebugFilename()))
 	if err != nil {
 		return err
 	}
@@ -51,8 +51,9 @@ func Convert(pctx context.Context, config Config, timelapse *filebrowse.Timelaps
 		Level:     log.DebugLevel,
 	}
 
-	// TODO: use a filter chain from config to apply resize.
-	imagec, imerrc := timelapse.Images()
+	// TODO: maybe use a filter chain in config to apply this sort of logic.
+	start, end := config.GetStartEnd()
+	imagec, imerrc := timelapse.Images(ctx, start, end)
 
 	cropper := process.Crop{
 		Region: config.GetRegion(),
@@ -138,7 +139,7 @@ func Convert(pctx context.Context, config Config, timelapse *filebrowse.Timelaps
 				log.Errorf("Failed to convert frame number %s to int", m[1])
 				continue
 			}
-			progress <- 100 * i / timelapse.Count
+			progress <- 100 * i / config.GetExpectedFrames()
 		}
 	}()
 

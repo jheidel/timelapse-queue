@@ -126,7 +126,7 @@ func (q *JobQueue) maybeStartNext(ctx context.Context) {
 	}
 	// Start next job.
 	j.State = StateActive
-	j.LogPath = j.Config.GetDebugPath(j.Timelapse)
+	j.LogPath = j.Timelapse.GetOutputPath(j.Config.GetDebugFilename())
 	j.start = time.Now()
 
 	jobCtx, cancel := context.WithCancel(ctx)
