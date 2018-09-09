@@ -5,7 +5,10 @@ import '@polymer/iron-icon/iron-icon.js';
 import '@polymer/iron-icons/iron-icons.js';
 import '@polymer/paper-button/paper-button.js';
 import '@polymer/paper-checkbox/paper-checkbox.js';
+import '@polymer/paper-dropdown-menu/paper-dropdown-menu.js';
 import '@polymer/paper-input/paper-input.js';
+import '@polymer/paper-item/paper-item.js';
+import '@polymer/paper-listbox/paper-listbox.js';
 import '@polymer/paper-slider/paper-slider.js';
 import '@polymer/paper-spinner/paper-spinner.js';
 import './shared-styles.js';
@@ -26,6 +29,9 @@ class Setup extends PolymerElement {
         }
         .short-input {
           max-width: 200px;
+        }
+        .medium-input {
+          max-width: 300px;
         }
         .slider paper-slider {
           --paper-slider-input: {
@@ -51,6 +57,12 @@ class Setup extends PolymerElement {
         .error {
           color: red;
           padding-bottom: 15px;
+        }
+        .stack-options {
+          padding-left: 20px;
+        }
+        .stack-option {
+          padding-top: 20px;
         }
       </style>
 
@@ -80,7 +92,7 @@ class Setup extends PolymerElement {
           <div>[[timelapse.DurationString]] (at 60fps)</div>
         </p>
 
-        <p class="short-input">
+        <p class="medium-input">
           <paper-input
                   label="Output Filename"
                   value="{{filename_}}"
@@ -101,6 +113,9 @@ class Setup extends PolymerElement {
         </p>
 
         <p>
+        <div class="helptext">
+          Adjust the start and end frame positions to control the length of the timelapse.
+        </div>
         <div class="slider">
           <span>Start Frame</span>
          <paper-slider min="0" max="[[getLastFrame_(timelapse)]]" value="{{startFrame_}}" pin></paper-slider>
@@ -146,15 +161,56 @@ class Setup extends PolymerElement {
           </div>
           <div>
                   <iron-collapse opened="[[stack_]]">
-                  <div class="short-input">
+                  <div class="stack-options">
+                        <div class="stack-option">
+                          <div class="helptext">
+                            <div>The frame stack count controls how long the stacking tail is.</div>
+                            <div>At 60fps, a value of "60" will give one second of history.</div>
+                            <div>Larger values will give a longer tail, though will take longer to process.</div>
+                          </div>
                           <paper-input
+                                class="short-input"
                                 label="Frames to Stack"
                                 type="number"
                                 min="1"
                                 max="[[timelapse.Count]]"
                                 value="{{stackWindow_}}"
+                                disabled="[[stackAll_]]"
                                 always-float-label></paper-input>
-                    
+                          <paper-checkbox checked="{{stackAll_}}">
+                            Stack All
+                          </paper-checkbox>
+                       </div>
+                       <div class="stack-option">
+                          <div class="helptext">
+                            <div>Frame skipping can be used to make the stacking effect more obvious.</div>
+                            <div>Increase to create larger gaps between stacked images.</div>
+                          </div>
+                          <paper-checkbox checked="{{skip_}}" disabled="[[stackAll_]]">
+                            Frame Skip
+                          </paper-checkbox>
+                          <paper-input
+                                class="short-input"
+                                label="Frame Skip"
+                                type="number"
+                                min="1"
+                                max="[[min_(stackWindow_, timelapse.Count)]]"
+                                value="{{skipCount_}}"
+                                disabled="[[!skip_]]"
+                                always-float-label></paper-input>
+                       </div>
+                       <div class="stack-option">
+                          <div class="helptext">
+                            <div>The blending mode can be changed to achieve different stacking effects.</div>
+                          </div>
+                          <!-- animations broken in polymer 3.0, disabled for now -->
+                          <paper-dropdown-menu label="Blending Mode" no-animations>
+                            <paper-listbox attr-for-selected="value" selected="{{stackMode_}}" slot="dropdown-content">
+                              <paper-item value="lighten">Lighten</paper-item>
+                              <paper-item value="darken">Darken</paper-item>
+                            </paper-listbox>
+                          <paper-dropdown-menu>
+                       </div>
                   </div>
                   </iron-collapse>
           </div>
@@ -162,6 +218,9 @@ class Setup extends PolymerElement {
 
         <p>
           <div>Advanced Options</div>
+          <div class="helptext">
+            These options may be useful for debugging performance issues.
+          </div>
           <div>
                   <paper-checkbox id="profilecpu">
                     CPU Profiling
@@ -193,6 +252,17 @@ class Setup extends PolymerElement {
           return;
       }
       this.croppr.setImage('/image?path=' + this.path + '&index=' + frame);
+  }
+ 
+  or_(a, b) {
+          return a || b;
+  }
+
+  min_(a, b) {
+    if (!a || !b) {
+      return 0;
+    }
+    return a < b ? a : b;
   }
 
   getLastFrame_(tl) {
@@ -266,7 +336,9 @@ class Setup extends PolymerElement {
       'StartFrame': this.startFrame_,
       'EndFrame': this.endFrame_,
       'Stack': this.stack_,
-      'StackWindow': parseInt(this.stackWindow_, 10),
+      'StackWindow': this.stackAll_ ? 0 : parseInt(this.stackWindow_, 10),
+      'StackSkipCount': this.skip_ ? parseInt(this.skipCount_, 10) : 0,
+      'StackMode': this.stackMode_,
     };
     if (this.$.profilecpu.checked) {
       config['ProfileCPU'] = true;
@@ -320,6 +392,22 @@ class Setup extends PolymerElement {
         value: false,
       },
       stack_: {
+        type: Boolean,
+        value: false,
+      },
+      stackMode_: {
+        type: String,
+        value: "lighten",
+      },
+      stackAll_: {
+        type: Boolean,
+        value: false,
+      },
+      skipCount_: {
+        type: Number,
+        value: 3,
+      },
+      skip_: {
         type: Boolean,
         value: false,
       },

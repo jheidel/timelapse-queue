@@ -27,6 +27,8 @@ type ConvertOptions struct {
 	ProfileCPU, ProfileMem bool
 	Stack                  bool
 	StackWindow            int
+	StackSkipCount         int
+	StackMode              string
 }
 
 func Convert(pctx context.Context, config Config, timelapse *filebrowse.Timelapse, progress chan<- int) error {
@@ -76,7 +78,8 @@ func Convert(pctx context.Context, config Config, timelapse *filebrowse.Timelaps
 	if opts.Stack {
 		stacker := process.Stacker{
 			Overlap: opts.StackWindow,
-			Merger:  &process.Lighten{},
+			Skip:    opts.StackSkipCount,
+			Merger:  process.GetMergerByName(opts.StackMode),
 		}
 		imagec, imerrc = stacker.Process(imagec, imerrc)
 	}

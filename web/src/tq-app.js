@@ -138,13 +138,6 @@ class TimelapseQueueApp extends PolymerElement {
   }
 
   _routePageChanged(page) {
-    console.log('route change updated');
-
-    console.log(this.routeData);
-    console.log(this.subroute);
-    console.log(this.queryParams);
-    console.log(this.page);
-
      // Show the corresponding page according to the route.
     if (!page) {
       this.page = 'browse';
@@ -163,13 +156,9 @@ class TimelapseQueueApp extends PolymerElement {
   }
 
   _pageChanged(page) {
-    console.log('page changed');
-
     this.set('routeData.page', page);
 
-
     window.dispatchEvent(new CustomEvent('location-changed'));
-    // 
 
     // Dynamically import nodes as we navigate to them.
     // This kind of works I guess?

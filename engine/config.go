@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"timelapse-queue/filebrowse"
+	"timelapse-queue/process"
 )
 
 // TODO not a huge fan of this interface being here...
@@ -34,16 +35,20 @@ type baseConfig struct {
 	StartFrame, EndFrame   int
 	ProfileCPU, ProfileMem bool
 
-	Stack       bool
-	StackWindow int
+	Stack          bool
+	StackWindow    int
+	StackSkipCount int
+	StackMode      string
 }
 
 func (f *baseConfig) GetConvertOptions() *ConvertOptions {
 	return &ConvertOptions{
-		Stack:       f.Stack,
-		StackWindow: f.StackWindow,
-		ProfileCPU:  f.ProfileCPU,
-		ProfileMem:  f.ProfileMem,
+		Stack:          f.Stack,
+		StackWindow:    f.StackWindow,
+		StackSkipCount: f.StackSkipCount,
+		StackMode:      f.StackMode,
+		ProfileCPU:     f.ProfileCPU,
+		ProfileMem:     f.ProfileMem,
 	}
 }
 
@@ -109,8 +114,14 @@ func (f *baseConfig) Validate(ctx context.Context, t *filebrowse.Timelapse) erro
 
 	if f.Stack {
 		smax := (f.EndFrame - f.StartFrame + 1)
-		if f.StackWindow < 1 || f.StackWindow > smax {
-			return fmt.Errorf("stacking window out of range 1..%d", smax)
+		if f.StackWindow < 0 || f.StackWindow > smax {
+			return fmt.Errorf("stacking window out of range 0..%d", smax)
+		}
+		if f.StackSkipCount < 0 || f.StackSkipCount > smax || f.StackSkipCount > f.StackWindow {
+			return fmt.Errorf("stacking skip count out of range")
+		}
+		if process.GetMergerByName(f.StackMode) == nil {
+			return fmt.Errorf("invalid stack mode %v", f.StackMode)
 		}
 	}
 	return nil
