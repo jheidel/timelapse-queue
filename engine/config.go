@@ -20,6 +20,8 @@ type Config interface {
 	GetRegion() image.Rectangle
 	// Gets the start & end of the sequence.
 	GetStartEnd() (int, int)
+	// The output video FPS.
+	GetFPS() int
 
 	// Gets the expected number of output frames in the sequence (to compute progress)
 	GetExpectedFrames() int
@@ -39,6 +41,7 @@ type baseConfig struct {
 	StackWindow    int
 	StackSkipCount int
 	StackMode      string
+	FrameRate      int
 }
 
 func (f *baseConfig) GetConvertOptions() *ConvertOptions {
@@ -137,6 +140,13 @@ func (f *baseConfig) GetDebugFilename() string {
 
 func (f *baseConfig) GetStartEnd() (int, int) {
 	return f.StartFrame, f.EndFrame
+}
+
+func (f *baseConfig) GetFPS() int {
+	if f.FrameRate > 0 {
+		return f.FrameRate
+	}
+	return 60
 }
 
 func (f *baseConfig) GetExpectedFrames() int {

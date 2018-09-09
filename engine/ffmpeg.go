@@ -105,8 +105,7 @@ func Convert(pctx context.Context, config Config, timelapse *filebrowse.Timelaps
 	}()
 
 	args := []string{
-		"-framerate", "60",
-
+		"-framerate", fmt.Sprintf("%d", config.GetFPS()),
 		"-f", "rawvideo",
 		"-pixel_format", "bgr32",
 		"-video_size", fmt.Sprintf("%dx%d", sample.Rect.Max.X, sample.Rect.Max.Y),

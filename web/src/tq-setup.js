@@ -64,6 +64,11 @@ class Setup extends PolymerElement {
         .stack-option {
           padding-top: 20px;
         }
+        .infobox {
+          padding: 3px;
+          background-color: #f4f4f4;
+          display: inline-block;
+        }
       </style>
 
       <iron-ajax
@@ -87,9 +92,12 @@ class Setup extends PolymerElement {
         <div class="circle">2</div>
         <h1>Configure Timelapse Job</h1>
         <p>
-          <div>[[timelapse.Name]]</div>
-          <div>[[timelapse.Count]] frames</div>
-          <div>[[timelapse.DurationString]] (at 60fps)</div>
+          <div>Input Timelapse</div>
+          <div class="helptext infobox">
+             <div>[[timelapse.Name]]</div>
+             <div>[[timelapse.Count]] frames</div>
+             <div>[[timelapse.DurationString]] (at 60fps)</div>
+          </div>
         </p>
 
         <p class="medium-input">
@@ -107,9 +115,26 @@ class Setup extends PolymerElement {
         </p>
 
         <p>
-          <div>Output File</div>
-          <div class="helptext">MP4 1920x1080 60fps</div>
-          <div class="helptext" hidden$="[[!filename_]]">[[timelapse.ParentPath]][[filename_]].mp4</div>
+          <div class="helptext">
+           <div>The output MP4 framerate can be adjusted.</div>
+           <div>60fps produces smooth video.</div>
+           <div>30fps can be used to extend the length of the timelapse.</div>
+          </div>
+          <paper-dropdown-menu label="Output Framerate" no-animations>
+            <paper-listbox attr-for-selected="value" selected="{{fps_}}" slot="dropdown-content">
+              <paper-item value="30">30 fps</paper-item>
+              <paper-item value="60">60 fps</paper-item>
+            </paper-listbox>
+          </paper-dropdown-menu>
+        </p>
+
+
+        <p>
+          <div>Output Video File</div>
+          <div class="helptext infobox">
+            <div>MP4 1920x1080 [[fps_]] fps</div>
+            <div hidden$="[[!filename_]]">[[timelapse.ParentPath]][[filename_]].mp4</div>
+          </div>
         </p>
 
         <p>
@@ -209,7 +234,7 @@ class Setup extends PolymerElement {
                               <paper-item value="lighten">Lighten</paper-item>
                               <paper-item value="darken">Darken</paper-item>
                             </paper-listbox>
-                          <paper-dropdown-menu>
+                          </paper-dropdown-menu>
                        </div>
                   </div>
                   </iron-collapse>
@@ -333,6 +358,7 @@ class Setup extends PolymerElement {
       'Width': this.crop.width,
       'Height': this.crop.height,
       'OutputName': this.filename_,
+      'FrameRate': parseInt(this.fps_, 10),
       'StartFrame': this.startFrame_,
       'EndFrame': this.endFrame_,
       'Stack': this.stack_,
@@ -398,6 +424,10 @@ class Setup extends PolymerElement {
       stackMode_: {
         type: String,
         value: "lighten",
+      },
+      fps_: {
+        type: String,
+        value: "60",
       },
       stackAll_: {
         type: Boolean,
