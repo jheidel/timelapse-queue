@@ -1,0 +1,14 @@
+[Unit]
+Description=Timelapse queue service
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=timelapse
+WorkingDirectory=/usr/local/bin/timelapse/
+ExecStart=/usr/local/bin/timelapse/timelapse-queue --port 8888 --root "/data/share/"
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
