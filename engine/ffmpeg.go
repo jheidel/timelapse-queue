@@ -113,8 +113,13 @@ func Convert(pctx context.Context, config Config, timelapse *filebrowse.Timelaps
 
 		"-c:v", "libx264",
 		"-preset", "slow",
-		"-crf", "17",
+		"-crf", "16",
+		"-level:v", "4.2",
+		"-profile:v", "high",
+		"-pix_fmt", "yuv420p",
+
 		"-s", fmt.Sprintf("%dx%d", sample.Rect.Max.X, sample.Rect.Max.Y),
+
 		"-progress", "/dev/stdout",
 		timelapse.GetOutputFullPath(config.GetFilename()),
 	}
