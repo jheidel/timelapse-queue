@@ -13,3 +13,11 @@ install:
 	cp timelapse-queue /usr/local/bin/timelapse/
 	cp timelapse.service /usr/local/bin/timelapse/
 	systemctl link /usr/local/bin/timelapse/timelapse.service
+ 
+stop:
+	systemctl stop timelapse.service
+
+start:
+	systemctl start timelapse.service
+
+reinstall: stop install start
