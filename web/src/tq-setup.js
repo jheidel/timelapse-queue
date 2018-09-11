@@ -12,12 +12,12 @@ import '@polymer/paper-listbox/paper-listbox.js';
 import '@polymer/paper-slider/paper-slider.js';
 import '@polymer/paper-spinner/paper-spinner.js';
 import './shared-styles.js';
-import Croppr from 'croppr/src/croppr.js';
+import Cropper from 'cropperjs';
 
 class Setup extends PolymerElement {
   static get template() {
     return html`
-      <link rel="stylesheet" href="../node_modules/croppr/src/css/croppr.css">
+      <link rel="stylesheet" href="../node_modules/cropperjs/dist/cropper.css">
       <style include="shared-styles">
         :host {
           display: block;
@@ -68,6 +68,12 @@ class Setup extends PolymerElement {
           padding: 3px;
           background-color: #f4f4f4;
           display: inline-block;
+        }
+        #container img {
+          max-width: 100%;
+        }
+        .cropcontainer {
+          max-width: 900px;
         }
       </style>
 
@@ -168,7 +174,7 @@ class Setup extends PolymerElement {
           <div hidden$="[[!loading_]]">
               <paper-spinner active="[[loading_]]"></paper-spinner>
           </div>
-          <div class="constrain-width" id="container">
+          <div class="cropcontainer" id="container">
           </div>
           <div class="helptext">
             <span>x=[[crop.x]] y=[[crop.y]]</span>
@@ -279,10 +285,11 @@ class Setup extends PolymerElement {
   }
 
   onFrame_(frame) {
-      if (!this.croppr || !this.enableObservers_ || !this.path || !frame) {
+      if (!this.cropper || !this.enableObservers_ || !this.path || !frame) {
           return;
       }
-      this.croppr.setImage('/image?path=' + this.path + '&index=' + frame);
+      const url = '/image?path=' + this.path + '&index=' + frame;
+      this.cropper.replace(url, true);
   }
  
   or_(a, b) {
@@ -319,7 +326,7 @@ class Setup extends PolymerElement {
       this.loading_ = true;
 
       const container = this.$.container;
-      // Remove any existing elements left behind by croppr.
+      // Remove any existing elements left behind by the cropping library.
       while (container.firstChild) {
               container.removeChild(container.firstChild);
       }
@@ -334,22 +341,19 @@ class Setup extends PolymerElement {
       const width = 1920;
       const height = 1080;
 
-      this.croppr = new Croppr(img, {
-              aspectRatio: height / width,
-              startSize: [100, 100, '%'],
-              // TODO doesn't work when the canvas is scaled.
-              //minSize: [width, height, 'px'],
-              onCropMove: (value) => {
-                this.crop = value;
-              },
-              onCropEnd: (value) => {
-                this.crop = value;
-              },
-              onInitialize: (instance) => {
-                this.crop = instance.getValue();
-                this.loading_ = false;
-                this.enableObservers_ = true;
-              },
+      this.cropper = new Cropper(img, {
+            aspectRatio: width / height,
+            crop: (e) => {
+              this.crop = this.cropper.getData(true);
+            },
+            viewMode: 2,
+            zoomable: false,
+            autoCropArea: 1,
+            autoCrop: true,
+            ready: (e) => {
+              this.loading_ = false;
+              this.enableObservers_ = true;
+            },
       });
   }     
   
@@ -395,7 +399,7 @@ class Setup extends PolymerElement {
     this.endFrame_ = 0;
     this.stack_ = false;
     this.skip_ = false;
-    this.croppr.destroy();
+    this.cropper.destroy();
   }
 
   onConvertError_(e) {

@@ -38,7 +38,7 @@
     "@polymer/paper-toast": "^3.0.0-pre.21",
     "@polymer/polymer": "^3.0.0",
     "@webcomponents/webcomponentsjs": "^2.0.0",
-    "croppr": "^2.3.1"
+    "cropperjs": "^1.4.1"
   },
   "devDependencies": {
     "polymer-cli": "^1.7.7",
