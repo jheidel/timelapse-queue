@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"image"
+	"os"
 	"time"
 
 	"timelapse-queue/filebrowse"
@@ -127,6 +128,11 @@ func (f *baseConfig) Validate(ctx context.Context, t *filebrowse.Timelapse) erro
 			return fmt.Errorf("invalid stack mode %v", f.StackMode)
 		}
 	}
+
+	if _, err := os.Stat(t.GetOutputFullPath(f.GetFilename())); err == nil {
+		return fmt.Errorf("the output file %v already exists", f.GetFilename())
+	}
+
 	return nil
 }
 
