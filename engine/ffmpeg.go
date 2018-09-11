@@ -117,6 +117,7 @@ func Convert(pctx context.Context, config Config, timelapse *filebrowse.Timelaps
 		"-level:v", "4.2",
 		"-profile:v", "high",
 		"-pix_fmt", "yuv420p",
+		"-x264opts", "colorprim=bt709:transfer=bt709:colormatrix=bt709:fullrange=off",
 
 		"-s", fmt.Sprintf("%dx%d", sample.Rect.Max.X, sample.Rect.Max.Y),
 
