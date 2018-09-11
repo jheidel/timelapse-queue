@@ -8,7 +8,9 @@ import (
 	_ "net/http/pprof"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
+	"time"
 
 	"timelapse-queue/engine"
 	"timelapse-queue/filebrowse"
@@ -21,6 +23,10 @@ import (
 var (
 	port = flag.Int("port", 8080, "Port to host web frontend.")
 	root = flag.String("root", "/home/jeff", "Filesystem root.")
+
+	// Timestamp that can be set with ldflags for versioning.
+	// Expected to be empty, or unix seconds.
+	BuildTimestamp string
 )
 
 func main() {
@@ -71,6 +77,15 @@ func main() {
 		http.Handle("/",
 			http.FileServer(
 				&assetfs.AssetFS{Asset: Asset, AssetDir: AssetDir, AssetInfo: AssetInfo, Prefix: "web/build/default"}))
+		http.HandleFunc("/build", func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+			ts, err := strconv.Atoi(BuildTimestamp)
+			if err != nil {
+				log.Fatalf("build timestamp %v not an integer", BuildTimestamp)
+			}
+			t := time.Unix(int64(ts), 0)
+			fmt.Fprintf(w, "%s", t.Format("Jan 2, 2006 3:04 PM"))
+		})
 
 		err := http.ListenAndServe(fmt.Sprintf(":%d", *port), nil)
 		log.Infof("HTTP server exited with status %v", err)

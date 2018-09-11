@@ -50,4 +50,4 @@ if ! [ -x "$(command -v go)" ]; then
   echo "On ubuntu: sudo apt-get install golang-go"
   exit 1
 fi
-go build
+go build -ldflags "-X main.BuildTimestamp=$(date +%s)"

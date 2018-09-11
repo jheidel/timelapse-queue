@@ -1,20 +1,21 @@
 import { PolymerElement, html } from '@polymer/polymer/polymer-element.js';
 import { setPassiveTouchGestures, setRootPath } from '@polymer/polymer/lib/utils/settings.js';
-import '@polymer/app-layout/app-drawer/app-drawer.js';
 import '@polymer/app-layout/app-drawer-layout/app-drawer-layout.js';
-import '@polymer/app-layout/app-header/app-header.js';
-import '@polymer/paper-toast/paper-toast.js';
+import '@polymer/app-layout/app-drawer/app-drawer.js';
 import '@polymer/app-layout/app-header-layout/app-header-layout.js';
+import '@polymer/app-layout/app-header/app-header.js';
 import '@polymer/app-layout/app-scroll-effects/app-scroll-effects.js';
 import '@polymer/app-layout/app-toolbar/app-toolbar.js';
 import '@polymer/app-route/app-location.js';
 import '@polymer/app-route/app-route.js';
+import '@polymer/iron-ajax/iron-ajax.js';
 import '@polymer/iron-icon/iron-icon.js';
 import '@polymer/iron-icons/iron-icons.js';
 import '@polymer/iron-pages/iron-pages.js';
 import '@polymer/iron-selector/iron-selector.js';
 import '@polymer/paper-icon-button/paper-icon-button.js';
 import '@polymer/paper-item/paper-icon-item.js';
+import '@polymer/paper-toast/paper-toast.js';
 import './tq-icons.js';
 
 import('./tq-queue.js');
@@ -63,12 +64,32 @@ class TimelapseQueueApp extends PolymerElement {
           color: black;
           font-weight: bold;
         }
+
+        .buildinfo {
+          background-color: white;
+          position: absolute;
+          bottom: 0px;
+          left: 0px;
+          padding: 2px;
+          font-size: 8pt;
+          z-index: 10;
+        }
       </style>
 
       <app-location route="{{route}}" use-hash-as-path></app-location>
 
       <app-route route="{{route}}" pattern="/:page" data="{{routeData}}" tail="{{subroute}}" query-params="{{queryParams}}">
       </app-route>
+
+      <iron-ajax
+          url="/build"
+          handle-as="text"
+          last-response="{{build_}}"
+          auto></iron-ajax>
+      <div class="buildinfo" hidden$="[[!build_]]">
+        <div>Last Software Update:</div>
+        <div>[[build_]]</div>
+      </div>
 
       <paper-toast id="toast"></paper-toast>
 
@@ -118,7 +139,11 @@ class TimelapseQueueApp extends PolymerElement {
       },
       routeData: Object,
       queryParams: Object,
-      subroute: Object
+      subroute: Object,
+      build_: {
+        type: String,
+        value: '',
+      },
     };
   }
 
