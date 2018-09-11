@@ -21,7 +21,14 @@ class Queue extends PolymerElement {
         .queue-item > div {
           padding: 5px;
         }
-
+        .item-details {
+          display: flex;
+          align-items: center;
+          flex-wrap: wrap;
+        }
+        .item-details > div {
+          padding: 5px;
+        }
         .queue-pending {
           background: #DDDDDD;
         }
@@ -61,27 +68,29 @@ class Queue extends PolymerElement {
               <div>
                <img src="/image?path=[[item.Timelapse.Path]]&thumb=true">
               </div>
-              <div>
-                  <div>[[item.Config.OutputName]].mp4</div>
-                  <div>[[item.Timelapse.Name]]</div>
-                  <div>[[getFrames_(item)]] images</div>
-              </div>
-              <div>
-                  <paper-progress value="[[item.Progress]]"></paper-progress>
-              </div>
-              <div>[[item.Progress]]%</div>
-              <div>
-                  <div>[[item.State]]</div>
-                  <div hidden$="[[!item.ElapsedString]]">[[item.ElapsedString]]</div>
-              </div>
-              <div hidden$="[[!isState_(item, 'active')]]">
-                  <paper-button data-jobid$="[[item.ID]]" data-url="/queue-cancel" data-opname="cancel" on-tap="onOp_" raised>Cancel</paper-button>
-              </div>
-              <div hidden$="[[isState_(item, 'active', 'cancel')]]">
-                  <paper-button data-jobid$="[[item.ID]]" data-url="/queue-remove" data-opname="remove" on-tap="onOp_" raised>Remove</paper-button>
-              </div>
-              <div hidden$="[[!item.LogPath]]">
-                <a href="/log?path=[[item.LogPath]]" target="_blank">Log</a>
+              <div class="item-details">
+                <div>
+                    <div>[[item.Config.OutputName]].mp4</div>
+                    <div>[[item.Timelapse.Name]]</div>
+                    <div>[[getFrames_(item)]] images</div>
+                </div>
+                <div>
+                    <paper-progress value="[[item.Progress]]"></paper-progress>
+                </div>
+                <div>[[item.Progress]]%</div>
+                <div>
+                    <div>[[item.State]]</div>
+                    <div hidden$="[[!item.ElapsedString]]">[[item.ElapsedString]]</div>
+                </div>
+                <div hidden$="[[!isState_(item, 'active')]]">
+                    <paper-button data-jobid$="[[item.ID]]" data-url="/queue-cancel" data-opname="cancel" on-tap="onOp_" raised>Cancel</paper-button>
+                </div>
+                <div hidden$="[[isState_(item, 'active', 'cancel')]]">
+                    <paper-button data-jobid$="[[item.ID]]" data-url="/queue-remove" data-opname="remove" on-tap="onOp_" raised>Remove</paper-button>
+                </div>
+                <div hidden$="[[!item.LogPath]]">
+                  <a href="/log?path=[[item.LogPath]]" target="_blank">Log</a>
+                </div>
               </div>
             </div>
           </template>
