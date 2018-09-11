@@ -111,7 +111,11 @@ class Browse extends PolymerElement {
    
     // Forces a browse state refresh but that's a good thing here to avoid
     // polution of the setup state.
-    window.location.href = path;
+    //window.location.href = path;
+    // TODO
+
+    window.history.pushState({}, null, path);
+    window.dispatchEvent(new CustomEvent('location-changed'));
   }
 
   static get properties() {

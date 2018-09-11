@@ -81,11 +81,9 @@ class Setup extends PolymerElement {
           ></iron-ajax>
       <iron-ajax
           id="timelapseajax"
-          auto="[[path]]"
-          params="[[getParams_(path)]]"
           url="/timelapse"
           handle-as="json"
-          last-response="{{timelapse}}"
+          on-response="onTimelapseAjax_"
           ></iron-ajax>
 
       <div class="card">
@@ -272,8 +270,16 @@ class Setup extends PolymerElement {
     `;
   }
 
+  onTimelapseAjax_(e) {
+    const resp = e.detail.xhr.response;
+    if (!resp) {
+            return;
+    }
+    this.timelapse = resp;
+  }
+
   onFrame_(frame) {
-      if (!this.croppr || !this.enableObservers_) {
+      if (!this.croppr || !this.enableObservers_ || !this.path || !frame) {
           return;
       }
       this.croppr.setImage('/image?path=' + this.path + '&index=' + frame);
@@ -298,17 +304,17 @@ class Setup extends PolymerElement {
   }
 
   onTimelapse_(tl) {
+    this.startFrame_ = 0;
     this.endFrame_ = this.getLastFrame_(tl);
-  }
-
-  getParams_(path) {
-      return {'path': path};
   }
 
   onPath_(path) {
       if (!path) {
               return
       }
+
+      this.$.timelapseajax.params = {'path': path};
+      this.$.timelapseajax.generateRequest();
 
       this.loading_ = true;
 
@@ -323,8 +329,6 @@ class Setup extends PolymerElement {
       img.classList.add("constrain-width");
       img.src = '/image?path=' + path;
       container.appendChild(img);
-
-      //this.$.croppr.src = '/image?path=' + path;
 
       // TODO set these based on job configuration.
       const width = 1920;
@@ -387,6 +391,11 @@ class Setup extends PolymerElement {
     this.toast_("Job successfully queued.");
     this.error_ = "";
     this.filename_ = "";
+    this.startFrame_ = 0;
+    this.endFrame_ = 0;
+    this.stack_ = false;
+    this.skip_ = false;
+    this.croppr.destroy();
   }
 
   onConvertError_(e) {
