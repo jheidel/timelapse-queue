@@ -82,9 +82,10 @@ class TimelapseQueueApp extends PolymerElement {
       </app-route>
 
       <iron-ajax
+          id="buildajax"
           url="/build"
           handle-as="text"
-          last-response="{{build_}}"
+          on-response="onBuild_"
           auto></iron-ajax>
       <div class="buildinfo" hidden$="[[!build_]]">
         <div>Last Software Update:</div>
@@ -154,8 +155,23 @@ class TimelapseQueueApp extends PolymerElement {
   }
 
   ready() {
-          this.addEventListener('toast', this._onToast);
           super.ready();
+          this.addEventListener('toast', this._onToast);
+          // Periodically check server build to prevent stale client.
+          setInterval(() => this.$.buildajax.generateRequest(), 10000);
+  }
+
+  onBuild_(e) {
+          const value = e.detail.xhr.response;
+          if (!value) {
+                  return;
+          }
+          if (!!this.build_ && this.build_ != value) {
+            // Server has a new build version; hard refresh the client.
+            location.reload(true);
+            return;
+          }
+          this.build_ = value;
   }
 
   _onToast(e) {
