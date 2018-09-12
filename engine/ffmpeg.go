@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"image"
+	"io"
 	"os"
 	"os/exec"
 	"regexp"
@@ -29,6 +30,54 @@ type ConvertOptions struct {
 	StackWindow            int
 	StackSkipCount         int
 	StackMode              string
+}
+
+// imageWriter writes RGBA images directly to FFmpeg to be used as rawvideo input.
+type imageWriter struct {
+	out    io.Writer
+	bufOut *bufio.Writer
+}
+
+func newImageWriter(w io.Writer) *imageWriter {
+	return &imageWriter{
+		out: w,
+	}
+}
+
+func (w *imageWriter) Write(img *image.RGBA) error {
+	sz := img.Rect.Dx() * img.Rect.Dy() * 4
+	if len(img.Pix) == sz {
+		// Region covers the entire pixel buffer, simply write everything directly to output.
+		if _, err := w.out.Write(img.Pix); err != nil {
+			return err
+		}
+		return nil
+	}
+
+	// Need to write out one stride at a time.
+	// Each frame needs to be complete though for FFmpeg, so use an output buffer.
+	if w.bufOut == nil {
+		w.bufOut = bufio.NewWriterSize(w.out, sz)
+	}
+	if w.bufOut.Available() < sz {
+		return fmt.Errorf("buffer size unexpectedly too small, want %v got %v", sz, w.bufOut.Available())
+	}
+	// TODO(jheidel): the docs seem wrong here since this should be base on img.Rect.Min but it isn't.
+	p := 0 // pix.Buf starts at the origin
+	for i := 0; i < img.Rect.Dy(); i++ {
+		rowEnd := p + img.Rect.Dx()*4
+		if rowEnd > len(img.Pix) {
+			return fmt.Errorf("unexpected end of pix buf from position %d, size %d", p, len(img.Pix))
+		}
+		if _, err := w.bufOut.Write(img.Pix[p:rowEnd]); err != nil {
+			return err
+		}
+		p += img.Stride
+	}
+	if err := w.bufOut.Flush(); err != nil {
+		return err
+	}
+	return nil
 }
 
 func Convert(pctx context.Context, config Config, timelapse *filebrowse.Timelapse, progress chan<- int) error {
@@ -108,7 +157,7 @@ func Convert(pctx context.Context, config Config, timelapse *filebrowse.Timelaps
 		"-framerate", fmt.Sprintf("%d", config.GetFPS()),
 		"-f", "rawvideo",
 		"-pixel_format", "bgr32",
-		"-video_size", fmt.Sprintf("%dx%d", sample.Rect.Max.X, sample.Rect.Max.Y),
+		"-video_size", fmt.Sprintf("%dx%d", sample.Rect.Dx(), sample.Rect.Dy()),
 		"-i", "-", // Read from stdin.
 
 		"-c:v", "libx264",
@@ -119,7 +168,7 @@ func Convert(pctx context.Context, config Config, timelapse *filebrowse.Timelaps
 		"-pix_fmt", "yuv420p",
 		"-x264opts", "colorprim=bt709:transfer=bt709:colormatrix=bt709:fullrange=off",
 
-		"-s", fmt.Sprintf("%dx%d", sample.Rect.Max.X, sample.Rect.Max.Y),
+		"-s", fmt.Sprintf("%dx%d", sample.Rect.Dx(), sample.Rect.Dy()),
 
 		"-progress", "/dev/stdout",
 		timelapse.GetOutputFullPath(config.GetFilename()),
@@ -168,17 +217,16 @@ func Convert(pctx context.Context, config Config, timelapse *filebrowse.Timelaps
 	}
 	go func() {
 		defer pin.Close()
+		imgWriter := newImageWriter(pin)
 		// Make sure to include the sample image we took earlier.
-		_, err := pin.Write(sample.Pix)
-		if err != nil {
+		if err := imgWriter.Write(sample); err != nil {
 			logger.Errorf("Failed to write initial image to ffmpeg: %v", err)
 			cancelf()
 			return
 		}
 		// Write remainder of image stream to ffmpeg.
 		for img := range imagec {
-			_, err := pin.Write(img.Pix)
-			if err != nil {
+			if err := imgWriter.Write(img); err != nil {
 				logger.Errorf("Failed to write image to ffmpeg: %v", err)
 				cancelf()
 				return
