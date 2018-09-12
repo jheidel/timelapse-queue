@@ -75,6 +75,11 @@ class Setup extends PolymerElement {
         .cropcontainer {
           max-width: 900px;
         }
+        .below-crop {
+          display: flex;
+          justify-content: space-between;
+          max-width: 900px;
+        }
       </style>
 
       <iron-ajax
@@ -176,9 +181,17 @@ class Setup extends PolymerElement {
           </div>
           <div class="cropcontainer" id="container">
           </div>
-          <div class="helptext">
-            <span>x=[[crop.x]] y=[[crop.y]]</span>
-            <span>Size [[crop.width]]x[[crop.height]]</span>
+          <div class="below-crop">
+                  <div class="helptext">
+                    <span>x=[[crop.x]] y=[[crop.y]]</span>
+                    <span>Size [[crop.width]]x[[crop.height]]</span>
+                  </div>
+                  <div>
+                    <paper-button on-tap="onSetSize_">
+                           <iron-icon icon="settings-overscan"></iron-icon>
+                          Set Region to 1920 x 1080
+                    </paper-button>
+                  </div>
           </div>
         </p>
 
@@ -290,6 +303,16 @@ class Setup extends PolymerElement {
       }
       const url = '/image?path=' + this.path + '&index=' + frame;
       this.cropper.replace(url, true);
+  }
+
+  onSetSize_(e) {
+    if (!this.cropper) {
+            return;
+    }
+    this.cropper.setData({
+      "width": 1920,
+      "height": 1080,
+    });
   }
  
   or_(a, b) {
