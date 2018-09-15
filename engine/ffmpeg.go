@@ -25,6 +25,10 @@ var (
 	progressRE = regexp.MustCompile(`frame=\s*(\d+)`)
 )
 
+const (
+	watchdogDuration = 5 * time.Minute
+)
+
 type ConvertOptions struct {
 	ProfileCPU, ProfileMem bool
 	Stack                  bool
@@ -94,6 +98,7 @@ func Convert(pctx context.Context, config Config, timelapse *filebrowse.Timelaps
 	}
 
 	ctx, cancelf := context.WithCancel(pctx)
+	defer cancelf()
 
 	logf, err := os.Create(timelapse.GetOutputFullPath(config.GetDebugFilename()))
 	if err != nil {
@@ -134,13 +139,19 @@ func Convert(pctx context.Context, config Config, timelapse *filebrowse.Timelaps
 		imagec, imerrc = stacker.Process(imagec, imerrc)
 	}
 
+	// Writes errors both to the system logger and the file logger.
+	dualErrorf := func(format string, v ...interface{}) {
+		log.Errorf(format, v...)
+		logger.Errorf(format, v...)
+	}
+
 	// Pull a sample image from the stream (to build config)
 	var sample *image.RGBA
 	select {
 	case sample = <-imagec:
 		break
 	case err := <-imerrc:
-		logger.Errorf("Failed to fetch a sample image: %v", err)
+		dualErrorf("Failed to fetch a sample image: %v", err)
 		return err
 	}
 
@@ -149,8 +160,20 @@ func Convert(pctx context.Context, config Config, timelapse *filebrowse.Timelaps
 	go func() {
 		err := <-imerrc
 		if err != nil {
-			logger.Errorf("Error reading image: %v", err)
+			dualErrorf("Error reading image: %v", err)
 			cancelf() // Abort ffmpeg.
+		}
+	}()
+
+	// Monitor for cases where FFmpeg becomes non-responsive (stops sending
+	// status updates). If so, abort ffmpeg to allow the queue to progress.
+	watchdog := time.NewTimer(watchdogDuration)
+	go func() {
+		select {
+		case <-watchdog.C:
+			dualErrorf("Watchdog expiration: FFmpeg non-responsive after %v, cancelling", watchdogDuration)
+			cancelf()
+		case <-ctx.Done():
 		}
 	}()
 
@@ -208,6 +231,7 @@ func Convert(pctx context.Context, config Config, timelapse *filebrowse.Timelaps
 				continue
 			}
 			progress <- 100 * i / config.GetExpectedFrames()
+			watchdog.Reset(watchdogDuration) // pet
 		}
 	}()
 
@@ -221,14 +245,14 @@ func Convert(pctx context.Context, config Config, timelapse *filebrowse.Timelaps
 		imgWriter := newImageWriter(pin)
 		// Make sure to include the sample image we took earlier.
 		if err := imgWriter.Write(sample); err != nil {
-			logger.Errorf("Failed to write initial image to ffmpeg: %v", err)
+			dualErrorf("Failed to write initial image to ffmpeg: %v", err)
 			cancelf()
 			return
 		}
 		// Write remainder of image stream to ffmpeg.
 		for img := range imagec {
 			if err := imgWriter.Write(img); err != nil {
-				logger.Errorf("Failed to write image to ffmpeg: %v", err)
+				dualErrorf("Failed to write image to ffmpeg: %v", err)
 				cancelf()
 				return
 			}
@@ -238,7 +262,7 @@ func Convert(pctx context.Context, config Config, timelapse *filebrowse.Timelaps
 	logger.Infof("Running FFmpeg with args: %v", args)
 
 	if err := cmd.Start(); err != nil {
-		log.Errorf("Failed to start FFmpeg subprocess")
+		dualErrorf("Failed to start FFmpeg subprocess")
 		return err
 	}
 
