@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"regexp"
 	"strconv"
+	"time"
 
 	"timelapse-queue/filebrowse"
 	"timelapse-queue/process"
@@ -247,6 +248,7 @@ func Convert(pctx context.Context, config Config, timelapse *filebrowse.Timelaps
 	}()
 
 	donec := ctx.Done()
+	var killc <-chan time.Time
 
 	for {
 		select {
@@ -263,6 +265,14 @@ func Convert(pctx context.Context, config Config, timelapse *filebrowse.Timelaps
 			logger.Warnf("Context cancel (%v), aborting FFmpeg", ctx.Err())
 			if err := cmd.Process.Signal(os.Interrupt); err != nil {
 				log.Infof("Failed to signal FFmpeg for context cancel: %v", err)
+				return err
+			}
+			killc = time.After(15 * time.Second)
+		case <-killc:
+			log.Warnf("FFmpeg cancel taking too long, sending SIGKILL")
+			logger.Warnf("FFmpeg cancel taking too long, sending SIGKILL")
+			if err := cmd.Process.Signal(os.Kill); err != nil {
+				log.Infof("Failed to SIGKILL FFmpeg: %v", err)
 				return err
 			}
 		}
