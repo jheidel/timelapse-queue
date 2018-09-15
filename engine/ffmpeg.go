@@ -267,7 +267,7 @@ func Convert(pctx context.Context, config Config, timelapse *filebrowse.Timelaps
 				log.Infof("Failed to signal FFmpeg for context cancel: %v", err)
 				return err
 			}
-			killc = time.After(15 * time.Second)
+			killc = time.After(30 * time.Second)
 		case <-killc:
 			log.Warnf("FFmpeg cancel taking too long, sending SIGKILL")
 			logger.Warnf("FFmpeg cancel taking too long, sending SIGKILL")
