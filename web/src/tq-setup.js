@@ -96,6 +96,13 @@ class Setup extends PolymerElement {
           handle-as="json"
           on-response="onTimelapseAjax_"
           ></iron-ajax>
+      <iron-ajax
+          id="profilesajax"
+          url="/profiles"
+          handle-as="json"
+          on-response="onProfiles_"
+          auto
+          ></iron-ajax>
 
       <div class="card">
         <div class="circle">2</div>
@@ -125,6 +132,20 @@ class Setup extends PolymerElement {
 
         <p>
           <div class="helptext">
+           <div>Select the resolution of the output file.</div>
+           <div>Larger resolutions can be useful for panning and scaling effects.</div>
+          </div>
+          <paper-dropdown-menu label="Output Resolution" no-animations>
+            <paper-listbox attr-for-selected="value" selected="{{profile_}}" slot="dropdown-content">
+              <template is="dom-repeat" items="[[profiles_]]">
+                <paper-item value="[[item]]">[[item.Name]]</paper-item>
+              </template>
+            </paper-listbox>
+          </paper-dropdown-menu>
+        </p>
+
+        <p>
+          <div class="helptext">
            <div>The output MP4 framerate can be adjusted.</div>
            <div>60fps produces smooth video.</div>
            <div>30fps can be used to extend the length of the timelapse.</div>
@@ -141,7 +162,7 @@ class Setup extends PolymerElement {
         <p>
           <div>Output Video File</div>
           <div class="helptext infobox">
-            <div>MP4 1920x1080 [[fps_]] fps</div>
+            <div>MP4 [[profile_.Width]]x[[profile_.Height]] [[fps_]] fps</div>
             <div hidden$="[[!filename_]]">[[timelapse.ParentPath]][[filename_]].mp4</div>
           </div>
         </p>
@@ -189,7 +210,7 @@ class Setup extends PolymerElement {
                   <div>
                     <paper-button on-tap="onSetSize_">
                            <iron-icon icon="settings-overscan"></iron-icon>
-                          Set Region to 1920 x 1080
+                          Set Region to [[profile_.Width]] x [[profile_.Height]]
                     </paper-button>
                   </div>
           </div>
@@ -310,8 +331,8 @@ class Setup extends PolymerElement {
             return;
     }
     this.cropper.setData({
-      "width": 1920,
-      "height": 1080,
+      "width": this.profile_.Width,
+      "height": this.profile_.Height,
     });
   }
  
@@ -339,45 +360,7 @@ class Setup extends PolymerElement {
   }
 
   onPath_(path) {
-      if (!path) {
-              return
-      }
-
-      this.$.timelapseajax.params = {'path': path};
-      this.$.timelapseajax.generateRequest();
-
-      this.loading_ = true;
-
-      const container = this.$.container;
-      // Remove any existing elements left behind by the cropping library.
-      while (container.firstChild) {
-              container.removeChild(container.firstChild);
-      }
-
-      // Add new image.
-      const img = document.createElement('img');
-      img.classList.add("constrain-width");
-      img.src = '/image?path=' + path;
-      container.appendChild(img);
-
-      // TODO set these based on job configuration.
-      const width = 1920;
-      const height = 1080;
-
-      this.cropper = new Cropper(img, {
-            aspectRatio: width / height,
-            crop: (e) => {
-              this.crop = this.cropper.getData(true);
-            },
-            viewMode: 2,
-            zoomable: false,
-            autoCropArea: 1,
-            autoCrop: true,
-            ready: (e) => {
-              this.loading_ = false;
-              this.enableObservers_ = true;
-            },
-      });
+      this.initCropboxIfReady_();
   }     
   
   onConvert_(e) {
@@ -396,6 +379,7 @@ class Setup extends PolymerElement {
       'StackWindow': this.stackAll_ ? 0 : parseInt(this.stackWindow_, 10),
       'StackSkipCount': this.skip_ ? parseInt(this.skipCount_, 10) : 0,
       'StackMode': this.stackMode_,
+      'OutputProfileName': this.profile_.Name,
     };
     if (this.$.profilecpu.checked) {
       config['ProfileCPU'] = true;
@@ -434,6 +418,65 @@ class Setup extends PolymerElement {
     this.dispatchEvent(new CustomEvent('toast', {detail: msg, bubbles: true, composed: true}));
   }
 
+  onProfiles_(e) {
+    console.log(e);
+    if (!e || !e.detail || !e.detail.xhr || !e.detail.xhr.response) {
+      return;
+    }
+    this.profiles_ = e.detail.xhr.response;
+    this.profile_ = this.profiles_[0];
+
+    this.initCropboxIfReady_();
+  }
+
+  onProfileChanged_(profile) {
+    if (!this.cropper) {
+            return;
+    }
+    this.cropper.setAspectRatio(profile.Width / profile.Height);
+  }
+
+  initCropboxIfReady_() {
+    if (!this.profile_ || !this.path) {
+            return;
+    }
+
+    this.$.timelapseajax.params = {'path': this.path};
+    this.$.timelapseajax.generateRequest();
+
+    this.loading_ = true;
+
+    const container = this.$.container;
+    // Remove any existing elements left behind by the cropping library.
+    while (container.firstChild) {
+            container.removeChild(container.firstChild);
+    }
+
+    // Add new image.
+    const img = document.createElement('img');
+    img.classList.add("constrain-width");
+    img.src = '/image?path=' + this.path;
+    container.appendChild(img);
+
+    // TODO set these based on job configuration.
+    const width = this.profile_.Width;
+    const height = this.profile_.Height;
+
+    this.cropper = new Cropper(img, {
+          aspectRatio: width / height,
+          crop: (e) => {
+            this.crop = this.cropper.getData(true);
+          },
+          viewMode: 2,
+          zoomable: false,
+          autoCropArea: 1,
+          autoCrop: true,
+          ready: (e) => {
+            this.loading_ = false;
+            this.enableObservers_ = true;
+          },
+    });
+  }
 
   static get properties() {
     return {
@@ -499,6 +542,13 @@ class Setup extends PolymerElement {
       error_: {
         type: String,
         value: "",
+      },
+      profiles_: {
+        type: Array,
+      },
+      profile_: {
+        type: Object,
+        observer: 'onProfileChanged_',
       },
     };
   }

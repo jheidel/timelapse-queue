@@ -44,6 +44,9 @@ class Queue extends PolymerElement {
         .queue-failed {
           background: #FFCCCC;
         }
+        .jobname {
+          font-weight: bold;
+        }
       </style>
 
       <iron-ajax
@@ -70,7 +73,8 @@ class Queue extends PolymerElement {
               </div>
               <div class="item-details">
                 <div>
-                    <div>[[item.Config.OutputName]].mp4</div>
+                    <div class="jobname">[[item.Config.OutputName]].mp4</div>
+                    <div>[[item.Config.OutputProfileName]]</div>
                     <div>[[item.Timelapse.Name]]</div>
                     <div>[[getFrames_(item)]] images</div>
                 </div>

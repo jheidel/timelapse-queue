@@ -116,6 +116,11 @@ func Convert(pctx context.Context, config Config, timelapse *filebrowse.Timelaps
 		Level:     log.DebugLevel,
 	}
 
+	outp, err := config.GetOutputProfile()
+	if err != nil {
+		return err
+	}
+
 	// TODO: maybe use a filter chain in config to apply this sort of logic.
 	start, end := config.GetStartEnd()
 	imagec, imerrc := timelapse.Images(ctx, start, end)
@@ -126,7 +131,7 @@ func Convert(pctx context.Context, config Config, timelapse *filebrowse.Timelaps
 	imagec, imerrc = cropper.Process(imagec, imerrc)
 
 	resizer := process.Resizer{
-		Size: image.Point{X: 1920, Y: 1080},
+		Size: image.Point{X: outp.Width, Y: outp.Height},
 	}
 	imagec, imerrc = resizer.Process(imagec, imerrc)
 
@@ -187,16 +192,14 @@ func Convert(pctx context.Context, config Config, timelapse *filebrowse.Timelaps
 		"-c:v", "libx264",
 		"-preset", "slow",
 		"-crf", "16",
-		"-level:v", "4.2",
-		"-profile:v", "high",
-		"-pix_fmt", "yuv420p",
+	}
+	args = append(args, outp.FFmpegArgs...)
+	args = append(args, []string{
 		"-x264opts", "colorprim=bt709:transfer=bt709:colormatrix=bt709:fullrange=off",
-
 		"-s", fmt.Sprintf("%dx%d", sample.Rect.Dx(), sample.Rect.Dy()),
-
 		"-progress", "/dev/stdout",
 		timelapse.GetOutputFullPath(config.GetFilename()),
-	}
+	}...)
 
 	cmd := exec.Command(util.LocateFFmpegOrDie(), args...)
 	r, err := cmd.StderrPipe()
@@ -291,7 +294,7 @@ func Convert(pctx context.Context, config Config, timelapse *filebrowse.Timelaps
 				log.Infof("Failed to signal FFmpeg for context cancel: %v", err)
 				return err
 			}
-			killc = time.After(30 * time.Second)
+			killc = time.After(2 * time.Minute)
 		case <-killc:
 			log.Warnf("FFmpeg cancel taking too long, sending SIGKILL")
 			logger.Warnf("FFmpeg cancel taking too long, sending SIGKILL")

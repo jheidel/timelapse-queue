@@ -29,6 +29,9 @@ type Config interface {
 
 	// Get convert options
 	GetConvertOptions() *ConvertOptions
+
+	// Gets the output profile for the conversion, i.e. the output resolution.
+	GetOutputProfile() (*Profile, error)
 }
 
 type baseConfig struct {
@@ -38,11 +41,12 @@ type baseConfig struct {
 	StartFrame, EndFrame   int
 	ProfileCPU, ProfileMem bool
 
-	Stack          bool
-	StackWindow    int
-	StackSkipCount int
-	StackMode      string
-	FrameRate      int
+	Stack             bool
+	StackWindow       int
+	StackSkipCount    int
+	StackMode         string
+	FrameRate         int
+	OutputProfileName string
 }
 
 func (f *baseConfig) GetConvertOptions() *ConvertOptions {
@@ -96,9 +100,14 @@ func (f *baseConfig) Validate(ctx context.Context, t *filebrowse.Timelapse) erro
 		return fmt.Errorf("start frame must come before end frame")
 	}
 
+	outp, err := f.GetOutputProfile()
+	if err != nil {
+		return err
+	}
+
 	r := f.GetRegion()
-	if r.Dx() < 1920 || r.Dy() < 1080 {
-		return fmt.Errorf("selected region must be at least 1920x1080")
+	if r.Dx() < outp.Width || r.Dy() < outp.Height {
+		return fmt.Errorf("selected region must be at least %d x %d", outp.Width, outp.Height)
 	}
 	ir, err := getSampleImageBounds(ctx, t, f.StartFrame)
 	if err != nil {
@@ -162,4 +171,8 @@ func (f *baseConfig) GetExpectedFrames() int {
 		frames += f.StackWindow
 	}
 	return frames
+}
+
+func (f *baseConfig) GetOutputProfile() (*Profile, error) {
+	return GetProfileByName(f.OutputProfileName)
 }

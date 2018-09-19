@@ -59,7 +59,7 @@ func main() {
 	jq := engine.NewJobQueue()
 	go jq.Loop(context.Background())
 
-	engine := &engine.TestServer{
+	eng := &engine.TestServer{
 		Browser: fb,
 		Queue:   jq,
 	}
@@ -70,10 +70,11 @@ func main() {
 		http.HandleFunc("/timelapse", fb.ServeTimelapse)
 		http.Handle("/image", ih)
 		http.Handle("/log", lh)
-		http.Handle("/convert", engine)
+		http.Handle("/convert", eng)
 		http.Handle("/queue", jq)
 		http.HandleFunc("/queue-cancel", jq.ServeCancel)
 		http.HandleFunc("/queue-remove", jq.ServeRemove)
+		http.HandleFunc("/profiles", engine.ServeProfiles)
 		http.Handle("/",
 			http.FileServer(
 				&assetfs.AssetFS{Asset: Asset, AssetDir: AssetDir, AssetInfo: AssetInfo, Prefix: "web/build/default"}))
