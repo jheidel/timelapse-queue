@@ -80,6 +80,18 @@ class Setup extends PolymerElement {
           justify-content: space-between;
           max-width: 900px;
         }
+        .inputrow {
+          display: flex;
+          align-items: center;
+          margin-top: -8px;
+        }
+        .inputrow > paper-input {
+          width: 60px;
+          padding-right: 5px;
+        }
+        .inputrow > span {
+          padding: 10px;
+        }
       </style>
 
       <iron-ajax
@@ -120,7 +132,7 @@ class Setup extends PolymerElement {
           <paper-input
                   label="Output Filename"
                   value="{{filename_}}"
-                  always-float-label 
+                  always-float-label
                   auto-validate
                   pattern="[a-zA-Z0-9-_ ]+"
                   error-message="Not a valid filename"
@@ -180,7 +192,7 @@ class Setup extends PolymerElement {
                 max="[[getLastFrame_(timelapse)]]"
                 value="{{startFrame_}}"
                 no-label-float
-            ></paper-input> 
+            ></paper-input>
         </div>
         <div class="slider">
           <span>End Frame</span>
@@ -191,7 +203,7 @@ class Setup extends PolymerElement {
                 max="[[getLastFrame_(timelapse)]]"
                 value="{{endFrame_}}"
                 no-label-float
-            ></paper-input> 
+            ></paper-input>
         </div>
         </p>
 
@@ -203,9 +215,40 @@ class Setup extends PolymerElement {
           <div class="cropcontainer" id="container">
           </div>
           <div class="below-crop">
-                  <div class="helptext">
-                    <span>x=[[crop.x]] y=[[crop.y]]</span>
-                    <span>Size [[crop.width]]x[[crop.height]]</span>
+                  <div class="helptext inputrow">
+                      <paper-input
+                            type="number"
+                            min="0"
+                            value="[[crop.x]]"
+                            data-param="x"
+                            on-value-changed="onUpdateParam_"
+                            label="X="
+                        ></paper-input>
+                      <paper-input
+                            type="number"
+                            min="0"
+                            value="[[crop.y]]"
+                            data-param="y"
+                            on-value-changed="onUpdateParam_"
+                            label="Y="
+                        ></paper-input>
+                      <span></span>
+                      <paper-input
+                            type="number"
+                            min="0"
+                            value="[[crop.width]]"
+                            data-param="width"
+                            on-value-changed="onUpdateParam_"
+                            label="Width"
+                        ></paper-input>
+                      <paper-input
+                            type="number"
+                            min="0"
+                            value="[[crop.height]]"
+                            data-param="height"
+                            on-value-changed="onUpdateParam_"
+                            label="Height"
+                        ></paper-input>
                   </div>
                   <div>
                     <paper-button on-tap="onSetSize_">
@@ -419,7 +462,6 @@ class Setup extends PolymerElement {
   }
 
   onProfiles_(e) {
-    console.log(e);
     if (!e || !e.detail || !e.detail.xhr || !e.detail.xhr.response) {
       return;
     }
@@ -476,6 +518,20 @@ class Setup extends PolymerElement {
             this.enableObservers_ = true;
           },
     });
+  }
+
+  onUpdateParam_(e) {
+      if (!e || !e.detail) {
+        return;
+      }
+      const value = parseInt(e.detail.value, 10);
+      if (isNaN(value)) {
+        return;
+      }
+      const param = e.path[0].dataset.param;
+      const data = this.cropper.getData();
+      data[param] = value;
+      this.cropper.setData(data);
   }
 
   static get properties() {
