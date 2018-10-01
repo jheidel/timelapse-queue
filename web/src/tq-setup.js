@@ -122,7 +122,7 @@ class Setup extends PolymerElement {
         <p>
           <div>Input Timelapse</div>
           <div class="helptext infobox">
-             <div>[[timelapse.Name]]</div>
+             <div>[[timelapse.Path]]</div>
              <div>[[timelapse.Count]] frames</div>
              <div>[[timelapse.DurationString]] (at 60fps)</div>
           </div>
