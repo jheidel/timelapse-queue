@@ -1,18 +1,50 @@
-# TODO: implementation is work in progress.
-# TODO: make separate builder for the frontend instead of relying on locally build data.
+####
+# Build the web frontend
+####
+
+FROM alpine AS builder-web
+WORKDIR /web/
+RUN apk add --no-cache nodejs nodejs-npm make
+
+# Make sure npm is up to date
+RUN npm install -g npm
+
+# Install yarn for web dependency management
+RUN npm install -g yarn
+
+# Install polymer CLI
+RUN yarn global add polymer-cli
+
+# Copy web source files
+COPY web/ .
+
+# Install all frontend dependencies.
+RUN yarn install
+
+# Build the frontend
+RUN make
 
 ####
 # Build the go binary
 ####
 
-FROM golang:alpine AS builder
+FROM golang:alpine AS builder-go
 RUN apk add --no-cache libjpeg-turbo-dev git g++
 WORKDIR /go/src/timelapse-queue/
 
-# TODO only copy the relevant part of the repo.
+# Copy all source files.
 COPY . .
 
-# TODO the go-bindata step from frontend data.
+# Copy built web package from the previous stage.
+COPY --from=builder-web /web/build/ /go/src/timelapse-queue/web/build/
+
+# Install go-bindata executable
+# TODO(jheidel): This tool is deprecated and it would be a good idea to switch
+# onto a maintained go asset package.
+RUN go get -u github.com/jteeuwen/go-bindata/...
+
+# Package built frontend into an asset file.
+RUN go-bindata web/build/default/...
 
 # Fetch all dependencies.
 RUN go get -d -v
@@ -20,14 +52,13 @@ RUN go get -d -v
 # Build the main executable.
 RUN go build -ldflags "-X main.BuildTimestamp=$(date +%s)"
 
-
 ####
-# Compose everything into the final image.
+# Compose everything into the final minimal image.
 ####
 
 FROM alpine
 WORKDIR /app
-COPY --from=builder /go/src/timelapse-queue/timelapse-queue /app
+COPY --from=builder-go /go/src/timelapse-queue/timelapse-queue /app
 RUN apk add --no-cache ffmpeg libjpeg-turbo
 
 # Create the mountpoint. The user is expected to run the image with a
