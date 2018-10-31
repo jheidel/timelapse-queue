@@ -1,12 +1,33 @@
-all:
-	./build.sh
+ts := $(shell /bin/date "+%s")
 
-debug:
-	./build.sh debug
+all: check build
+
+check:
+	./checkdeps.sh
+
+web/build:
+	cd web && $(MAKE)
+
+assetfs: web/build
+	go-bindata web/build/default/...
+
+debugfs: web/build
+	go-bindata -debug web/build/default/...
+
+go:
+	go get -d -v
+	go build -ldflags "-X main.BuildTimestamp=$(ts)"
+
+.PHONY: debug build
+
+debug: debugfs go
+build: assetfs go
+
 
 clean:
-	rm -r web/build
+	cd web && $(MAKE) clean
 	rm bindata.go timelapse-queue
+
 
 install:
 	mkdir -p /usr/local/bin/timelapse/

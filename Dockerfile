@@ -18,9 +18,6 @@ RUN yarn global add polymer-cli
 # Copy web source files
 COPY web/ .
 
-# Install all frontend dependencies.
-RUN yarn install
-
 # Build the frontend
 RUN make
 
@@ -29,7 +26,7 @@ RUN make
 ####
 
 FROM golang:alpine AS builder-go
-RUN apk add --no-cache libjpeg-turbo-dev git g++
+RUN apk add --no-cache libjpeg-turbo-dev git g++ make
 WORKDIR /go/src/timelapse-queue/
 
 # Copy all source files.
@@ -43,14 +40,8 @@ COPY --from=builder-web /web/build/ /go/src/timelapse-queue/web/build/
 # onto a maintained go asset package.
 RUN go get -u github.com/jteeuwen/go-bindata/...
 
-# Package built frontend into an asset file.
-RUN go-bindata web/build/default/...
-
-# Fetch all dependencies.
-RUN go get -d -v
-
-# Build the main executable.
-RUN go build -ldflags "-X main.BuildTimestamp=$(date +%s)"
+# Build the standalone executable.
+RUN make build
 
 ####
 # Compose everything into the final minimal image.
