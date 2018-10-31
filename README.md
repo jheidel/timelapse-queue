@@ -8,6 +8,30 @@ further editing.
 
 This project is used for the [HikeArt YouTube Channel](https://youtube.com/hikeart).
 
+## Getting Started
+
+The easiest way to start using this project is by installing the public Docker image.
+
+If you're not familiar with running a Docker container see:
+https://docs.docker.com/get-started/
+
+To download and run the timelapse-queue image:
+
+```shell
+# Point this at a directory containing timelapses you wish to process.
+# The path must be absolute.
+TIMELAPSE_DIR=/home/jeff/
+
+docker run \
+    -p 8080:80 \
+    --mount type=bind,source=${TIMELAPSE_DIR?},target=/mnt/fsroot \
+    jheidel/timelapse-queue
+```
+
+Once it's running, navigate to http://localhost:8080.
+
+TODO: provide some guidance for running this as a service.
+
 ## Software Overview
 
 Timelapses are configured via a web application, written using [Polymer 3](https://www.polymer-project.org/).
@@ -32,6 +56,16 @@ platforms with a couple rough edges).
 
 It has only been tested on Google Chrome and may encounter issues with other
 browsers.
+
+To build the Docker image:
+
+```
+docker build -t timelapse-queue .
+```
+
+Also available on Docker Hub:
+
+https://hub.docker.com/r/jheidel/timelapse-queue/
 
 ## Project Status
 
