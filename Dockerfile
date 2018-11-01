@@ -61,5 +61,5 @@ RUN mkdir -p /mnt/fsroot
 RUN apk add --update tzdata
 ENV TZ=America/Los_Angeles
 
-EXPOSE 80
-CMD ["./timelapse-queue", "--port", "80", "--root", "/mnt/fsroot"]
+EXPOSE 8080
+CMD ["./timelapse-queue", "--port", "8080", "--root", "/mnt/fsroot"]
