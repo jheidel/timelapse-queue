@@ -89,6 +89,21 @@ func (f *FileBrowser) GetTimelapse(p string) (*Timelapse, error) {
 	return nil, fmt.Errorf("timelapse %v not found in %v", name, dir)
 }
 
+type tkey struct {
+	prefix string
+	num    int
+}
+
+func (a tkey) less(b tkey) bool {
+	if b.prefix > a.prefix {
+		return true
+	}
+	if b.num > a.num {
+		return true
+	}
+	return false
+}
+
 func (f *FileBrowser) listPath(p string) (*Response, error) {
 	root, err := filepath.EvalSymlinks(f.Root)
 	if err != nil {
@@ -119,7 +134,7 @@ func (f *FileBrowser) listPath(p string) (*Response, error) {
 
 	r := &Response{}
 
-	tmap := make(map[string]*Timelapse)
+	tmap := make(map[tkey]*Timelapse)
 
 	// Generate list of directories and timelapse files.
 	for _, finfo := range files {
@@ -161,36 +176,57 @@ func (f *FileBrowser) listPath(p string) (*Response, error) {
 			return nil, err
 		}
 
-		var t *Timelapse
-		if lookup, ok := tmap[prefix]; ok {
-			t = lookup
-		} else {
-			t = &Timelapse{
-				Name:       finfo.Name(),
-				Path:       rel,
-				ParentPath: p,
-				Prefix:     prefix,
-				Ext:        ext,
-				Start:      num,
-				NumLen:     len(numStr),
-				browser:    f,
-			}
-			tmap[prefix] = t
+		key := tkey{
+			prefix: prefix,
+			num:    num,
 		}
-
-		// Increment counter if this is the next image in the sequence.
-		if num == t.Start+t.Count {
-			t.Count += 1
+		tmap[key] = &Timelapse{
+			Name:       finfo.Name(),
+			Path:       rel,
+			ParentPath: p,
+			Prefix:     prefix,
+			Ext:        ext,
+			Start:      num,
+			NumLen:     len(numStr),
+			browser:    f,
 		}
 	}
 
-	// Extract timelapse map to list.
-	for _, v := range tmap {
-		fps := 60
-		dur := time.Second * time.Duration(v.Count) / time.Duration(fps)
-		v.DurationString = dur.Truncate(100 * time.Millisecond).String()
+	for len(tmap) > 0 {
+		// Find smallest key.
+		var kmin tkey
+		var found bool
+		for k, _ := range tmap {
+			if !found || k.less(kmin) {
+				kmin = k
+				found = true
+			}
+		}
 
-		r.Timelapses = append(r.Timelapses, v)
+		// Count up sequentially and extract all in the same sequence.
+		t := tmap[kmin]
+		count := 0
+		for p := t.Start; ; p++ {
+			k := tkey{
+				prefix: t.Prefix,
+				num:    p,
+			}
+			if _, ok := tmap[k]; ok {
+				delete(tmap, k)
+			} else {
+				break
+			}
+			count++
+		}
+		t.Count = count
+
+		// Compute some final metadata.
+		fps := 60
+		dur := time.Second * time.Duration(t.Count) / time.Duration(fps)
+		t.DurationString = dur.Truncate(100 * time.Millisecond).String()
+
+		// And include in the final output set of timelapses.
+		r.Timelapses = append(r.Timelapses, t)
 	}
 
 	// Generates list of parents
