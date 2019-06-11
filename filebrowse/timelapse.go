@@ -46,12 +46,6 @@ func (t *Timelapse) GetOutputPath(base string) string {
 	return filepath.Join(parent, base)
 }
 
-// GetFFmpegInputPath returns a full path that can be used for FFmpegInput.
-func (t *Timelapse) GetFFmpegInputPath() string {
-	base := fmt.Sprintf("%s%%%02dd.%s", t.Prefix, t.NumLen, t.Ext)
-	return t.GetOutputFullPath(base)
-}
-
 func (t *Timelapse) GetPathForIndex(idx int) string {
 	basef := fmt.Sprintf("%s%%%02dd.%s", t.Prefix, t.NumLen, t.Ext)
 	base := fmt.Sprintf(basef, t.Start+idx)
