@@ -27,6 +27,7 @@ var (
 
 const (
 	watchdogDuration = 5 * time.Minute
+	frameDeadline    = 4 * time.Minute
 )
 
 type ConvertOptions struct {
@@ -82,6 +83,7 @@ func (w *imageWriter) Write(img *image.RGBA) error {
 	if err := w.bufOut.Flush(); err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -152,12 +154,16 @@ func Convert(pctx context.Context, config Config, timelapse *filebrowse.Timelaps
 
 	// Pull a sample image from the stream (to build config)
 	var sample *image.RGBA
+	sampleDeadline := time.NewTimer(frameDeadline)
 	select {
 	case sample = <-imagec:
 		break
 	case err := <-imerrc:
 		dualErrorf("Failed to fetch a sample image: %v", err)
 		return err
+	case <-sampleDeadline.C:
+		dualErrorf("Deadline exceeded fetching sample image")
+		return fmt.Errorf("deadline exceeded fetching sample")
 	}
 
 	// Watch for future errors on the input channel. Any errors here should abort
@@ -252,12 +258,24 @@ func Convert(pctx context.Context, config Config, timelapse *filebrowse.Timelaps
 			cancelf()
 			return
 		}
-		// Write remainder of image stream to ffmpeg.
-		for img := range imagec {
-			if err := imgWriter.Write(img); err != nil {
-				dualErrorf("Failed to write image to ffmpeg: %v", err)
+
+		for {
+			deadline := time.NewTimer(frameDeadline)
+			select {
+			case <-deadline.C:
+				dualErrorf("Deadline exceeded waiting for next frame")
 				cancelf()
 				return
+			case img, ok := <-imagec:
+				if !ok {
+					// Done with image sequence.
+					return
+				}
+				if err := imgWriter.Write(img); err != nil {
+					dualErrorf("Failed to write image to ffmpeg: %v", err)
+					cancelf()
+					return
+				}
 			}
 		}
 	}()
