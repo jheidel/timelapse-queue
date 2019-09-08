@@ -16,6 +16,7 @@ import (
 	"timelapse-queue/process"
 	"timelapse-queue/util"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/pkg/profile"
 
 	log "github.com/sirupsen/logrus"
@@ -280,6 +281,7 @@ func Convert(pctx context.Context, config Config, timelapse *filebrowse.Timelaps
 		}
 	}()
 
+	logger.Infof("Starting job: %+v", spew.Sdump(config))
 	logger.Infof("Running FFmpeg with args: %v", args)
 
 	if err := cmd.Start(); err != nil {
