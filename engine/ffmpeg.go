@@ -266,11 +266,16 @@ func Convert(pctx context.Context, config Config, timelapse *filebrowse.Timelaps
 			case <-deadline.C:
 				dualErrorf("Deadline exceeded waiting for next frame")
 
-				ppath := profile.ProfilePath(timelapse.GetOutputFullPath("timeout_profile"))
-				p := profile.Start(ppath)
-				time.Sleep(10 * time.Second)
-				p.Stop()
-				dualErrorf("timeout profile written to %v", ppath)
+				wp := func(s string, o func(*profile.Profile)) {
+					ppath := profile.ProfilePath(timelapse.GetOutputFullPath(fmt.Sprintf("timeout_%s_profile", s)))
+					p := profile.Start(o, ppath)
+					time.Sleep(10 * time.Second)
+					p.Stop()
+					dualErrorf("%s profile written to %s", s, ppath)
+				}
+				wp("cpu", profile.CPUProfile)
+				wp("memory", profile.MemProfile)
+				wp("mutex", profile.MutexProfile)
 
 				cancelf()
 				return
