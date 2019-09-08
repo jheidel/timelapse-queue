@@ -265,6 +265,13 @@ func Convert(pctx context.Context, config Config, timelapse *filebrowse.Timelaps
 			select {
 			case <-deadline.C:
 				dualErrorf("Deadline exceeded waiting for next frame")
+
+				ppath := profile.ProfilePath(timelapse.GetOutputFullPath("timeout_profile"))
+				p := profile.Start(ppath)
+				time.Sleep(10 * time.Second)
+				p.Stop()
+				dualErrorf("timeout profile written to %v", ppath)
+
 				cancelf()
 				return
 			case img, ok := <-imagec:
