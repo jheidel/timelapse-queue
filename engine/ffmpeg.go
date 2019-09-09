@@ -217,7 +217,15 @@ func Convert(pctx context.Context, config Config, timelapse *filebrowse.Timelaps
 	stderr := bufio.NewScanner(r)
 
 	go func() {
-		for stderr.Scan() {
+		for {
+			if ok := stderr.Scan(); !ok {
+				if err := stderr.Err(); err != nil {
+					dualErrorf("Error scanning stderr: %v", err)
+				} else {
+					logger.Info("stderr closed")
+				}
+				return
+			}
 			logger.Error(stderr.Text())
 		}
 	}()
@@ -228,7 +236,15 @@ func Convert(pctx context.Context, config Config, timelapse *filebrowse.Timelaps
 	}
 	stdout := bufio.NewScanner(r)
 	go func() {
-		for stdout.Scan() {
+		for {
+			if ok := stdout.Scan(); !ok {
+				if err := stdout.Err(); err != nil {
+					dualErrorf("Error scanning stdout: %v", err)
+				} else {
+					logger.Info("stdout closed.")
+				}
+				return
+			}
 			l := stdout.Text()
 			logger.Info(l)
 
