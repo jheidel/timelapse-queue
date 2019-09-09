@@ -34,8 +34,12 @@ type Job struct {
 
 	// Elapsed time, derived from start time. Updated as part of JSON serialization.
 	ElapsedString string
-	start         time.Time
-	stop          time.Time
+
+	// Number of images expected in the job, updated as part of the JSON serialization.
+	ExpectedFrames int
+
+	start time.Time
+	stop  time.Time
 
 	// Cancels this job.
 	cancelf context.CancelFunc
@@ -189,6 +193,7 @@ func (q *JobQueue) toJSON() *jsonResp {
 		if !j.start.IsZero() {
 			j.ElapsedString = end.Sub(j.start).Truncate(time.Second).String()
 		}
+		j.ExpectedFrames = j.Config.GetExpectedFrames()
 	}
 
 	r, err := json.Marshal(q)

@@ -76,7 +76,7 @@ class Queue extends PolymerElement {
                     <div class="jobname">[[item.Config.OutputName]].mp4</div>
                     <div>[[item.Config.OutputProfileName]]</div>
                     <div>[[item.Timelapse.Name]]</div>
-                    <div>[[getFrames_(item)]] images</div>
+                    <div>[[item.ExpectedFrames]] images</div>
                 </div>
                 <div>
                     <paper-progress value="[[item.Progress]]"></paper-progress>
@@ -110,13 +110,6 @@ class Queue extends PolymerElement {
 
   isEmpty_(q) {
     return !q || q.length == 0;
-  }
-
-  getFrames_(item) {
-    if (!item) {
-      return 0;
-    }
-    return item.Config.EndFrame - item.Config.StartFrame + 1;
   }
 
   ready() {

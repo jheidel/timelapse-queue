@@ -69,7 +69,7 @@ func (t *Timelapse) getImage(num int) (*image.RGBA, error) {
 
 // Images produces a stream of images for this timelapse.
 // Optionally supply non-zero start & end for bounded timelapse.
-func (t *Timelapse) Images(ctx context.Context, start, end int) (<-chan *image.RGBA, chan error) {
+func (t *Timelapse) Images(ctx context.Context, start, end, skip int) (<-chan *image.RGBA, chan error) {
 	errc := make(chan error, 1)
 	imagec := make(chan *image.RGBA)
 	go func() {
@@ -78,7 +78,7 @@ func (t *Timelapse) Images(ctx context.Context, start, end int) (<-chan *image.R
 		if end == 0 {
 			end = t.Count - 1
 		}
-		for i := start; i <= end; i++ {
+		for i := start; i <= end; i += skip {
 			img, err := t.getImage(i)
 			if err != nil {
 				errc <- err

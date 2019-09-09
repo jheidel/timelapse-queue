@@ -80,6 +80,9 @@ class Setup extends PolymerElement {
           justify-content: space-between;
           max-width: 900px;
         }
+        .skip-input paper-input {
+          width: 100px;
+        }
         .inputrow {
           display: flex;
           align-items: center;
@@ -208,6 +211,31 @@ class Setup extends PolymerElement {
         </p>
 
         <p>
+          <div>
+              <paper-checkbox checked="{{skipEnabled_}}">
+                Speed Up with Frame Skip
+              </paper-checkbox>
+          </div>
+          <div>
+            <iron-collapse opened="[[skipEnabled_]]">
+              <div class="helptext">
+                <div>Set the skip count to speed up the timelapse.</div>
+                <div>For example, a skip count of "2" will make the timelapse twice as fast.</div>
+              </div>
+              <div class="skip-input">
+                <paper-input
+                      label="Skip Count"
+                      type="number"
+                      min="2"
+                      max="[[getLastFrame_(timelapse)]]"
+                      value="{{skip_}}"
+                  ></paper-input>
+              </div>
+            </iron-collapse>
+          </div>
+        </p>
+
+        <p>
           <div>Select Image Region</div>
           <div hidden$="[[!loading_]]">
               <paper-spinner active="[[loading_]]"></paper-spinner>
@@ -292,8 +320,8 @@ class Setup extends PolymerElement {
                             <div>Frame skipping can be used to make the stacking effect more obvious.</div>
                             <div>Increase to create larger gaps between stacked images.</div>
                           </div>
-                          <paper-checkbox checked="{{skip_}}" disabled="[[stackAll_]]">
-                            Frame Skip
+                          <paper-checkbox checked="{{stackSkip_}}" disabled="[[stackAll_]]">
+                            Stack Frame Skip
                           </paper-checkbox>
                           <paper-input
                                 class="short-input"
@@ -301,8 +329,8 @@ class Setup extends PolymerElement {
                                 type="number"
                                 min="1"
                                 max="[[min_(stackWindow_, timelapse.Count)]]"
-                                value="{{skipCount_}}"
-                                disabled="[[!skip_]]"
+                                value="{{stackSkipCount_}}"
+                                disabled="[[!stackSkip_]]"
                                 always-float-label></paper-input>
                        </div>
                        <div class="stack-option">
@@ -344,7 +372,7 @@ class Setup extends PolymerElement {
               <iron-icon icon="error"></iron-icon>
               [[error_]]
             </div>
-            <paper-button on-tap="onConvert_" raised>
+            <paper-button id="add-button" on-tap="onConvert_" raised>
                    <iron-icon icon="schedule"></iron-icon>
                   Add Timelapse Job to Queue
             </paper-button>
@@ -418,9 +446,10 @@ class Setup extends PolymerElement {
       'FrameRate': parseInt(this.fps_, 10),
       'StartFrame': this.startFrame_,
       'EndFrame': this.endFrame_,
+      'Skip': this.skipEnabled_ ? parseInt(this.skip_, 10) : 0,
       'Stack': this.stack_,
       'StackWindow': this.stackAll_ ? 0 : parseInt(this.stackWindow_, 10),
-      'StackSkipCount': this.skip_ ? parseInt(this.skipCount_, 10) : 0,
+      'StackSkipCount': this.stackSkip_ ? parseInt(this.stackSkipCount_, 10) : 0,
       'StackMode': this.stackMode_,
       'OutputProfileName': this.profile_.Name,
     };
@@ -447,8 +476,9 @@ class Setup extends PolymerElement {
     this.filename_ = "";
     this.startFrame_ = 0;
     this.endFrame_ = 0;
+    this.skipEnabled_ = false;
     this.stack_ = false;
-    this.skip_ = false;
+    this.stackSkip_ = false;
     this.cropper.destroy();
   }
 
@@ -564,15 +594,23 @@ class Setup extends PolymerElement {
         type: String,
         value: "60",
       },
+      skip_: {
+        type: Number,
+        value: 2,
+      },
+      skipEnabled_: {
+        type: Boolean,
+        value: false,
+      },
       stackAll_: {
         type: Boolean,
         value: false,
       },
-      skipCount_: {
+      stackSkipCount_: {
         type: Number,
         value: 3,
       },
-      skip_: {
+      stackSkip_: {
         type: Boolean,
         value: false,
       },

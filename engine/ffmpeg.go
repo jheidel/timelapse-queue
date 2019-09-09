@@ -41,18 +41,6 @@ type ConvertOptions struct {
 	StackMode              string
 }
 
-// imageWriter writes RGBA images directly to FFmpeg to be used as rawvideo input.
-type imageWriter struct {
-	out    io.Writer
-	bufOut *bytes.Buffer
-}
-
-func newImageWriter(w io.Writer) *imageWriter {
-	return &imageWriter{
-		out: w,
-	}
-}
-
 // scanLines is bufio.ScanLines, but breaks on \r|\n.
 // FFMPEG uses carriage return without newline to implement status updates.
 func scanLines(data []byte, atEOF bool) (advance int, token []byte, err error) {
@@ -69,6 +57,18 @@ func scanLines(data []byte, atEOF bool) (advance int, token []byte, err error) {
 		return len(data), data, nil
 	}
 	return 0, nil, nil
+}
+
+// imageWriter writes RGBA images directly to FFmpeg to be used as rawvideo input.
+type imageWriter struct {
+	out    io.Writer
+	bufOut *bytes.Buffer
+}
+
+func newImageWriter(w io.Writer) *imageWriter {
+	return &imageWriter{
+		out: w,
+	}
 }
 
 func (w *imageWriter) Write(img *image.RGBA) error {
@@ -146,7 +146,8 @@ func Convert(pctx context.Context, config Config, timelapse *filebrowse.Timelaps
 
 	// TODO: maybe use a filter chain in config to apply this sort of logic.
 	start, end := config.GetStartEnd()
-	imagec, imerrc := timelapse.Images(ctx, start, end)
+	skip := config.GetSkip()
+	imagec, imerrc := timelapse.Images(ctx, start, end, skip)
 
 	cropper := process.Crop{
 		Region: config.GetRegion(),

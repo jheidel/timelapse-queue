@@ -21,6 +21,8 @@ type Config interface {
 	GetRegion() image.Rectangle
 	// Gets the start & end of the sequence.
 	GetStartEnd() (int, int)
+	// Gets the skip of the sequence.
+	GetSkip() int
 	// The output video FPS.
 	GetFPS() int
 
@@ -39,6 +41,7 @@ type baseConfig struct {
 	X, Y, Width, Height    int
 	OutputName             string
 	StartFrame, EndFrame   int
+	Skip                   int
 	ProfileCPU, ProfileMem bool
 
 	Stack             bool
@@ -76,7 +79,7 @@ func (f *baseConfig) GetRegion() image.Rectangle {
 func getSampleImageBounds(pctx context.Context, t *filebrowse.Timelapse, start int) (image.Rectangle, error) {
 	ctx, cancelf := context.WithTimeout(pctx, 10*time.Second)
 	defer cancelf()
-	imagec, errc := t.Images(ctx, start, 0)
+	imagec, errc := t.Images(ctx, start, 0, 1)
 	select {
 	case img := <-imagec:
 		return img.Rect, nil
@@ -98,6 +101,9 @@ func (f *baseConfig) Validate(ctx context.Context, t *filebrowse.Timelapse) erro
 	}
 	if f.StartFrame >= f.EndFrame {
 		return fmt.Errorf("start frame must come before end frame")
+	}
+	if f.Skip < 0 || f.Skip >= (f.EndFrame-f.StartFrame) {
+		return fmt.Errorf("invalid skip value %d", f.Skip)
 	}
 
 	outp, err := f.GetOutputProfile()
@@ -126,7 +132,7 @@ func (f *baseConfig) Validate(ctx context.Context, t *filebrowse.Timelapse) erro
 	}
 
 	if f.Stack {
-		smax := (f.EndFrame - f.StartFrame + 1)
+		smax := (f.EndFrame - f.StartFrame + 1) / f.GetSkip()
 		if f.StackWindow < 0 || f.StackWindow > smax {
 			return fmt.Errorf("stacking window out of range 0..%d", smax)
 		}
@@ -157,6 +163,13 @@ func (f *baseConfig) GetStartEnd() (int, int) {
 	return f.StartFrame, f.EndFrame
 }
 
+func (f *baseConfig) GetSkip() int {
+	if f.Skip == 0 {
+		return 1
+	}
+	return f.Skip
+}
+
 func (f *baseConfig) GetFPS() int {
 	if f.FrameRate > 0 {
 		return f.FrameRate
@@ -166,6 +179,9 @@ func (f *baseConfig) GetFPS() int {
 
 func (f *baseConfig) GetExpectedFrames() int {
 	frames := f.EndFrame + 1 - f.StartFrame
+	if f.Skip > 1 {
+		frames = frames / f.Skip
+	}
 	if f.Stack {
 		// Stacking will add additonal frames to the output.
 		frames += f.StackWindow
