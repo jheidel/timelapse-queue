@@ -2,6 +2,7 @@ package engine
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"fmt"
 	"image"
@@ -42,7 +43,7 @@ type ConvertOptions struct {
 // imageWriter writes RGBA images directly to FFmpeg to be used as rawvideo input.
 type imageWriter struct {
 	out    io.Writer
-	bufOut *bufio.Writer
+	bufOut *bytes.Buffer
 }
 
 func newImageWriter(w io.Writer) *imageWriter {
@@ -64,10 +65,11 @@ func (w *imageWriter) Write(img *image.RGBA) error {
 	// Need to write out one stride at a time.
 	// Each frame needs to be complete though for FFmpeg, so use an output buffer.
 	if w.bufOut == nil {
-		w.bufOut = bufio.NewWriterSize(w.out, sz)
+		w.bufOut = new(bytes.Buffer)
+		w.bufOut.Grow(sz)
 	}
-	if w.bufOut.Available() < sz {
-		return fmt.Errorf("buffer size unexpectedly too small, want %v got %v", sz, w.bufOut.Available())
+	if w.bufOut.Cap() < sz {
+		return fmt.Errorf("buffer size unexpectedly too small, want %v got %v", sz, w.bufOut.Cap())
 	}
 	// TODO(jheidel): the docs seem wrong here since this should be base on img.Rect.Min but it isn't.
 	p := 0 // pix.Buf starts at the origin
@@ -81,10 +83,9 @@ func (w *imageWriter) Write(img *image.RGBA) error {
 		}
 		p += img.Stride
 	}
-	if err := w.bufOut.Flush(); err != nil {
+	if _, err := w.bufOut.WriteTo(w.out); err != nil {
 		return err
 	}
-
 	return nil
 }
 
