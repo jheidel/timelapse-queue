@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
 	"timelapse-queue/filebrowse"
@@ -50,6 +51,24 @@ func newImageWriter(w io.Writer) *imageWriter {
 	return &imageWriter{
 		out: w,
 	}
+}
+
+// scanLines is bufio.ScanLines, but breaks on \r|\n.
+// FFMPEG uses carriage return without newline to implement status updates.
+func scanLines(data []byte, atEOF bool) (advance int, token []byte, err error) {
+	if atEOF && len(data) == 0 {
+		return 0, nil, nil
+	}
+	if i := bytes.IndexByte(data, '\r'); i >= 0 {
+		return i + 1, data[0:i], nil
+	}
+	if i := bytes.IndexByte(data, '\n'); i >= 0 {
+		return i + 1, data[0:i], nil
+	}
+	if atEOF {
+		return len(data), data, nil
+	}
+	return 0, nil, nil
 }
 
 func (w *imageWriter) Write(img *image.RGBA) error {
@@ -205,7 +224,12 @@ func Convert(pctx context.Context, config Config, timelapse *filebrowse.Timelaps
 	args = append(args, []string{
 		"-x264opts", "colorprim=bt709:transfer=bt709:colormatrix=bt709:fullrange=off",
 		"-s", fmt.Sprintf("%dx%d", sample.Rect.Dx(), sample.Rect.Dy()),
+
+		// Prefix output with logging level.
+		"-loglevel", "level+info",
+		// Write progress in a more parseable format to stdout.
 		"-progress", "/dev/stdout",
+
 		timelapse.GetOutputFullPath(config.GetFilename()),
 	}...)
 
@@ -215,18 +239,20 @@ func Convert(pctx context.Context, config Config, timelapse *filebrowse.Timelaps
 		return err
 	}
 	stderr := bufio.NewScanner(r)
+	stderr.Split(scanLines)
 
 	go func() {
 		for {
 			if ok := stderr.Scan(); !ok {
 				if err := stderr.Err(); err != nil {
 					dualErrorf("Error scanning stderr: %v", err)
-				} else {
-					logger.Info("stderr closed")
 				}
+				logger.Info("FFMPEG stderr channel closed.")
 				return
 			}
-			logger.Error(stderr.Text())
+			if s := strings.TrimSpace(stderr.Text()); s != "" {
+				logger.Info(s)
+			}
 		}
 	}()
 
@@ -240,13 +266,11 @@ func Convert(pctx context.Context, config Config, timelapse *filebrowse.Timelaps
 			if ok := stdout.Scan(); !ok {
 				if err := stdout.Err(); err != nil {
 					dualErrorf("Error scanning stdout: %v", err)
-				} else {
-					logger.Info("stdout closed.")
 				}
+				logger.Info("FFMPEG stdout channel closed.")
 				return
 			}
 			l := stdout.Text()
-			logger.Info(l)
 
 			m := progressRE.FindStringSubmatch(l)
 			if len(m) != 2 {
