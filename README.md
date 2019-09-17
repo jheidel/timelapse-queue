@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.org/jheidel/timelapse-queue.svg?branch=master)](https://travis-ci.org/jheidel/timelapse-queue)
 
-A web frontend FFmpeg wrapper for easily, user-friendly generation of
+A web frontend FFmpeg wrapper for easy, user-friendly generation of
 timelapses from image sequences.
 
 Output files are 1080p MP4 files intended to work with Adobe Premiere for
@@ -12,7 +12,9 @@ This project is used for the [HikeArt YouTube Channel](https://youtube.com/hikea
 
 ## Getting Started
 
-The easiest way to start using this project is by installing the public Docker image.
+The easiest way to start using this project is by installing the public Docker
+image. The image is automatically built from this repository using
+[Travis CI](https://travis-ci.org/jheidel/timelapse-queue).
 
 If you're not familiar with running a Docker container see:
 https://docs.docker.com/get-started/
