@@ -1,5 +1,7 @@
 # Timelapse Queue
 
+[![Build Status](https://travis-ci.org/jheidel/timelapse-queue.svg?branch=master)](https://travis-ci.org/jheidel/timelapse-queue)
+
 A web frontend FFmpeg wrapper for easily, user-friendly generation of
 timelapses from image sequences.
 

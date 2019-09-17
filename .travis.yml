@@ -1,0 +1,8 @@
+language: go
+
+services:
+  - docker
+
+script:
+  - docker build -t jheidel/timelapse-queue .
+
