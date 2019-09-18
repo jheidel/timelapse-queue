@@ -133,6 +133,7 @@ class Setup extends PolymerElement {
 
         <p class="medium-input">
           <paper-input
+                  id="output-filename"
                   label="Output Filename"
                   value="{{filename_}}"
                   always-float-label
