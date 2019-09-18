@@ -14,13 +14,17 @@ script:
 after_script:
   - docker images
 
-before_deploy:
-  - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
-  - docker tag "$IMAGE_NAME" "${IMAGE_NAME}:latest"
+jobs:
+  include:
+    - stage: test
+      name: "Integration Test"
+      script: echo TODO
 
-deploy:
-  provider: script
-  script: docker push "${IMAGE_NAME}:latest"
-  on:
-    branch: master
+    - stage: deploy
+      name: "Deploy to Docker Hub"
+      script: skip
+      before_deploy:
+        - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+        - docker tag "$IMAGE_NAME" "${IMAGE_NAME}:latest"
+      deploy: docker push "${IMAGE_NAME}:latest"
 
