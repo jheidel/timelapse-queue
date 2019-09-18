@@ -23,6 +23,7 @@ var (
 	// For development, run this test with `--wait --headless=false`
 	headless = flag.Bool("headless", false, "Whether to run chrome in headless mode")
 	wait     = flag.Bool("wait", false, "Whether to wait for SIGTERM")
+	cleanup  = flag.Bool("cleanup", true, "Whether to delete generated files once completed")
 )
 
 func WaitForTerm() {
@@ -58,6 +59,8 @@ func TestIntegration(t *testing.T) {
 
 	queue_done := `document.querySelector("tq-app").shadowRoot.querySelector("tq-queue").shadowRoot.querySelector("div.queue-item.queue-done")`
 
+	remove_job := `document.querySelector("tq-app").shadowRoot.querySelector("tq-queue").shadowRoot.querySelector("div.queue-item.queue-done .remove-button")`
+
 	// TODO: chromedp.Click doesn't seem to work, uncaught exceptions?
 
 	shortSleep := func(ctx context.Context) error {
@@ -68,6 +71,14 @@ func TestIntegration(t *testing.T) {
 	}
 
 	var dummy bool
+
+	// Clean up our output files once we're finished testing.
+	defer func() {
+		if *cleanup {
+			os.Remove("testdata/output.mp4")
+			os.Remove("testdata/output.mp4.log")
+		}
+	}()
 
 	// Start the test timelapse conversion.
 	runCtx, cancel := context.WithTimeout(ctx, 60*time.Second)
@@ -97,6 +108,10 @@ func TestIntegration(t *testing.T) {
 		// Wait for timelapse conversion to complete.
 		chromedp.ActionFunc(shortSleep),
 		chromedp.WaitVisible(queue_done, chromedp.ByJSPath),
+		// Remove the finished job.
+		chromedp.WaitVisible(remove_job, chromedp.ByJSPath),
+		chromedp.ActionFunc(shortSleep),
+		chromedp.Evaluate(remove_job+".click(); true;", &dummy),
 	); err != nil {
 		if outLog, err := ioutil.ReadFile("testdata/output.mp4.log"); err != nil {
 			log.Printf("FFmpeg output:\n%s", string(outLog))

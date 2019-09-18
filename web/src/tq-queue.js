@@ -90,7 +90,7 @@ class Queue extends PolymerElement {
                     <paper-button data-jobid$="[[item.ID]]" data-url="/queue-cancel" data-opname="cancel" on-tap="onOp_" raised>Cancel</paper-button>
                 </div>
                 <div hidden$="[[isState_(item, 'active', 'cancel')]]">
-                    <paper-button data-jobid$="[[item.ID]]" data-url="/queue-remove" data-opname="remove" on-tap="onOp_" raised>Remove</paper-button>
+                    <paper-button class="remove-button" data-jobid$="[[item.ID]]" data-url="/queue-remove" data-opname="remove" on-tap="onOp_" raised>Remove</paper-button>
                 </div>
                 <div hidden$="[[!item.LogPath]]">
                   <a href="/log?path=[[item.LogPath]]" target="_blank">Log</a>
