@@ -125,7 +125,7 @@ class Setup extends PolymerElement {
         <p>
           <div>Input Timelapse</div>
           <div class="helptext infobox">
-             <div>[[timelapse.Path]]</div>
+             <div>[[path]]</div>
              <div>[[timelapse.Count]] frames</div>
              <div>[[timelapse.DurationString]] (at 60fps)</div>
           </div>
@@ -179,7 +179,7 @@ class Setup extends PolymerElement {
           <div>Output Video File</div>
           <div class="helptext infobox">
             <div>MP4 [[profile_.Width]]x[[profile_.Height]] [[fps_]] fps</div>
-            <div hidden$="[[!filename_]]">[[timelapse.ParentPath]][[filename_]].mp4</div>
+            <div hidden$="[[!filename_]]">[[timelapse.OutputPath]][[filename_]].mp4</div>
           </div>
         </p>
 
@@ -438,7 +438,7 @@ class Setup extends PolymerElement {
   onConvert_(e) {
     this.$.convertajax.headers={'content-type': 'application/x-www-form-urlencoded'};
     const config = {
-      'Path': this.timelapse.Path,
+      'Path': this.path,
       'X': this.crop.x,
       'Y': this.crop.y,
       'Width': this.crop.width,

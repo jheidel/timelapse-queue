@@ -82,7 +82,7 @@ class Browse extends PolymerElement {
               </a>
              </div>
              <div>[[item.Name]]</div>
-             <div><span>[[item.Count]]</span> images (<span>[[item.DurationString]] @60fps</span>)</div>
+             <div><span>[[item.Count]]</span> images</div>
             <paper-button on-tap="_onSelectTimelapse" raised>New Timelapse Job</paper-button>
           </div>
           </template>
@@ -109,11 +109,6 @@ class Browse extends PolymerElement {
     const timelapse = e.model.item;
     const path = '/?path=' + timelapse.Path + '#/setup';
    
-    // Forces a browse state refresh but that's a good thing here to avoid
-    // polution of the setup state.
-    //window.location.href = path;
-    // TODO
-
     window.history.pushState({}, null, path);
     window.dispatchEvent(new CustomEvent('location-changed'));
   }

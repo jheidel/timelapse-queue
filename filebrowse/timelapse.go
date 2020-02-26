@@ -6,10 +6,30 @@ import (
 	"image"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/pixiv/go-libjpeg/jpeg"
 )
 
+// ITimelapse is a generic timelapse interface.
+type ITimelapse interface {
+	GetPathForIndex(idx int) string
+	GetOutputFullPath(base string) string
+	ImageCount() int
+	View() *TimelapseView
+	// Name is the first timelapse in the sequence.
+	ImageName() string
+	// Path can be used for /image
+	ImagePath() string
+}
+
+type TimelapseView struct {
+	OutputPath     string
+	Count          int
+	DurationString string
+}
+
+// Timelapse represents a sequence of images on disk.
 type Timelapse struct {
 	// The base name of the first image in the sequence.
 	Name string
@@ -29,21 +49,40 @@ type Timelapse struct {
 	// Start is the index of the first timelapse.
 	Start int
 
-	// DurationString is the length of the timelapse as a human readable string.
-	DurationString string
-
 	browser *FileBrowser
+}
+
+func toDuration(t ITimelapse) string {
+	fps := 60
+	dur := time.Second * time.Duration(t.ImageCount()) / time.Duration(fps)
+	return dur.Truncate(100 * time.Millisecond).String()
+}
+
+func (t *Timelapse) ImageName() string {
+	return t.Name
+}
+
+func (t *Timelapse) ImagePath() string {
+	return t.Path
+}
+
+func (t *Timelapse) View() *TimelapseView {
+	return &TimelapseView{
+		OutputPath:     t.ParentPath,
+		Count:          t.ImageCount(),
+		DurationString: toDuration(t),
+	}
 }
 
 // GetOutputFullPath returns a path that can be used for file output with the given basename.
 func (t *Timelapse) GetOutputFullPath(base string) string {
-	return filepath.Join(t.browser.Root, t.GetOutputPath(base))
+	parent, _ := filepath.Split(t.Path)
+	rel := filepath.Join(parent, base)
+	return filepath.Join(t.browser.Root, rel)
 }
 
-// GetOutputPath returns a relative path that can be used for file output with the given basename.
-func (t *Timelapse) GetOutputPath(base string) string {
-	parent, _ := filepath.Split(t.Path)
-	return filepath.Join(parent, base)
+func (t *Timelapse) ImageCount() int {
+	return t.Count
 }
 
 func (t *Timelapse) GetPathForIndex(idx int) string {
@@ -52,7 +91,7 @@ func (t *Timelapse) GetPathForIndex(idx int) string {
 	return t.GetOutputFullPath(base)
 }
 
-func (t *Timelapse) getImage(num int) (*image.RGBA, error) {
+func getImage(t ITimelapse, num int) (*image.RGBA, error) {
 	f, err := os.Open(t.GetPathForIndex(num))
 	if err != nil {
 		return nil, err
@@ -69,17 +108,17 @@ func (t *Timelapse) getImage(num int) (*image.RGBA, error) {
 
 // Images produces a stream of images for this timelapse.
 // Optionally supply non-zero start & end for bounded timelapse.
-func (t *Timelapse) Images(ctx context.Context, start, end, skip int) (<-chan *image.RGBA, chan error) {
+func Images(ctx context.Context, t ITimelapse, start, end, skip int) (<-chan *image.RGBA, chan error) {
 	errc := make(chan error, 1)
 	imagec := make(chan *image.RGBA)
 	go func() {
 		defer close(imagec)
 		defer close(errc)
 		if end == 0 {
-			end = t.Count - 1
+			end = t.ImageCount() - 1
 		}
 		for i := start; i <= end; i += skip {
-			img, err := t.getImage(i)
+			img, err := getImage(t, i)
 			if err != nil {
 				errc <- err
 				return

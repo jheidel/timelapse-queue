@@ -76,10 +76,10 @@ func (f *baseConfig) GetRegion() image.Rectangle {
 	}
 }
 
-func getSampleImageBounds(pctx context.Context, t *filebrowse.Timelapse, start int) (image.Rectangle, error) {
+func getSampleImageBounds(pctx context.Context, t filebrowse.ITimelapse, start int) (image.Rectangle, error) {
 	ctx, cancelf := context.WithTimeout(pctx, 10*time.Second)
 	defer cancelf()
-	imagec, errc := t.Images(ctx, start, 0, 1)
+	imagec, errc := filebrowse.Images(ctx, t, start, 0, 1)
 	select {
 	case img := <-imagec:
 		return img.Rect, nil
@@ -88,15 +88,15 @@ func getSampleImageBounds(pctx context.Context, t *filebrowse.Timelapse, start i
 	}
 }
 
-func (f *baseConfig) Validate(ctx context.Context, t *filebrowse.Timelapse) error {
+func (f *baseConfig) Validate(ctx context.Context, t filebrowse.ITimelapse) error {
 	if f.OutputName == "" {
 		return fmt.Errorf("missing output filename")
 	}
 
-	if f.StartFrame < 0 || f.StartFrame >= t.Count {
+	if f.StartFrame < 0 || f.StartFrame >= t.ImageCount() {
 		return fmt.Errorf("start frame out of bounds")
 	}
-	if f.EndFrame < 0 || f.EndFrame >= t.Count {
+	if f.EndFrame < 0 || f.EndFrame >= t.ImageCount() {
 		return fmt.Errorf("end frame out of bounds")
 	}
 	if f.StartFrame >= f.EndFrame {

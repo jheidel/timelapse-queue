@@ -69,13 +69,13 @@ class Queue extends PolymerElement {
           <template is="dom-repeat" items="[[response.Queue]]">
             <div class$="queue-item queue-[[item.State]]">
               <div>
-               <img src="/image?path=[[item.Timelapse.Path]]&thumb=true">
+               <img src="/image?path=[[item.ImagePath]]&thumb=true">
               </div>
               <div class="item-details">
                 <div>
                     <div class="jobname">[[item.Config.OutputName]].mp4</div>
                     <div>[[item.Config.OutputProfileName]]</div>
-                    <div>[[item.Timelapse.Name]]</div>
+                    <div>[[item.ImageName]]</div>
                     <div>[[item.ExpectedFrames]] images</div>
                 </div>
                 <div>
@@ -93,7 +93,7 @@ class Queue extends PolymerElement {
                     <paper-button class="remove-button" data-jobid$="[[item.ID]]" data-url="/queue-remove" data-opname="remove" on-tap="onOp_" raised>Remove</paper-button>
                 </div>
                 <div hidden$="[[!item.LogPath]]">
-                  <a href="/log?path=[[item.LogPath]]" target="_blank">Log</a>
+                  <a href="/log?path=[[item.ImagePath]]&name=[[item.LogPath]]" target="_blank">Log</a>
                 </div>
               </div>
             </div>

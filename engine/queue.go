@@ -25,12 +25,17 @@ const (
 )
 
 type Job struct {
-	State     jobState
-	ID        int
-	LogPath   string
-	Progress  int
-	Timelapse *filebrowse.Timelapse
-	Config    Config
+	State    jobState
+	ID       int
+	LogPath  string
+	Progress int
+
+	Timelapse filebrowse.ITimelapse
+
+	ImagePath string
+	ImageName string
+
+	Config Config
 
 	// Elapsed time, derived from start time. Updated as part of JSON serialization.
 	ElapsedString string
@@ -135,7 +140,7 @@ func (q *JobQueue) maybeStartNext(ctx context.Context) {
 	}
 	// Start next job.
 	j.State = StateActive
-	j.LogPath = j.Timelapse.GetOutputPath(j.Config.GetDebugFilename())
+	j.LogPath = j.Config.GetDebugFilename()
 	j.start = time.Now()
 
 	jobCtx, cancel := context.WithCancel(ctx)
@@ -172,10 +177,12 @@ func (q *JobQueue) markJobDone(err error) {
 	log.Infof("gc complete")
 }
 
-func (q *JobQueue) AddJob(config Config, t *filebrowse.Timelapse) {
+func (q *JobQueue) AddJob(config Config, t filebrowse.ITimelapse) {
 	j := &Job{
 		State:     StatePending,
 		Timelapse: t,
+		ImagePath: t.ImagePath(),
+		ImageName: t.ImageName(),
 		Config:    config,
 		ID:        q.jobIDgen,
 	}

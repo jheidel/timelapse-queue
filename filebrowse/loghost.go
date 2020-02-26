@@ -10,13 +10,13 @@ type LogHost struct {
 	Browser *FileBrowser
 }
 
-func (h *LogHost) writeLog(rel string, w http.ResponseWriter) error {
-	path, err := h.Browser.GetFullPath(rel)
+func (h *LogHost) writeLog(path, name string, w http.ResponseWriter) error {
+	t, err := h.Browser.GetTimelapse(path)
 	if err != nil {
 		return err
 	}
 
-	txt, err := os.Open(path)
+	txt, err := os.Open(t.GetOutputFullPath(name))
 	if err != nil {
 		return err
 	}
@@ -35,8 +35,9 @@ func (h *LogHost) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	rel := r.Form.Get("path")
-	if err := h.writeLog(rel, w); err != nil {
+	path := r.Form.Get("path")
+	name := r.Form.Get("name")
+	if err := h.writeLog(path, name, w); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }

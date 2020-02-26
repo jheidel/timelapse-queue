@@ -108,7 +108,7 @@ func (w *imageWriter) Write(img *image.RGBA) error {
 	return nil
 }
 
-func Convert(pctx context.Context, config Config, timelapse *filebrowse.Timelapse, progress chan<- int) error {
+func Convert(pctx context.Context, config Config, timelapse filebrowse.ITimelapse, progress chan<- int) error {
 	defer close(progress)
 	opts := config.GetConvertOptions()
 
@@ -147,7 +147,7 @@ func Convert(pctx context.Context, config Config, timelapse *filebrowse.Timelaps
 	// TODO: maybe use a filter chain in config to apply this sort of logic.
 	start, end := config.GetStartEnd()
 	skip := config.GetSkip()
-	imagec, imerrc := timelapse.Images(ctx, start, end, skip)
+	imagec, imerrc := filebrowse.Images(ctx, timelapse, start, end, skip)
 
 	cropper := process.Crop{
 		Region: config.GetRegion(),

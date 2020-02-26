@@ -35,8 +35,9 @@ func (h *ImageHost) writeImage(rel string, idx string, thumb bool, w http.Respon
 		return err
 	}
 
-	if i < 0 || i >= t.Count {
-		return fmt.Errorf("index out of timelapse range %d to %d", 0, t.Count-1)
+	count := t.ImageCount()
+	if i < 0 || i >= count {
+		return fmt.Errorf("index out of timelapse range %d to %d", 0, count-1)
 	}
 
 	imf, err := os.Open(t.GetPathForIndex(i))
