@@ -49,7 +49,9 @@ func TestIntegration(t *testing.T) {
 
 	first_folder := `document.querySelector("tq-app").shadowRoot.querySelector("tq-browse").shadowRoot.querySelector("div.files.dirs > div:nth-child(1) > paper-button")`
 
-	new_job := `document.querySelector("tq-app").shadowRoot.querySelector("tq-browse").shadowRoot.querySelector("div.files.timelapses > div.timelapse > paper-button")`
+	add_part := `document.querySelector("tq-app").shadowRoot.querySelector("tq-browse").shadowRoot.querySelector("div.files.timelapses > div.timelapse > paper-button")`
+
+	new_job := `document.querySelector("tq-app").shadowRoot.querySelector("tq-browse").shadowRoot.querySelector("paper-button.finalize")`
 
 	cropper := `document.querySelector("tq-app").shadowRoot.querySelector("tq-setup").shadowRoot.querySelector(".cropper-crop-box")`
 
@@ -92,7 +94,11 @@ func TestIntegration(t *testing.T) {
 		chromedp.WaitVisible(first_folder, chromedp.ByJSPath),
 		chromedp.ActionFunc(shortSleep),
 		chromedp.Evaluate(first_folder+".click(); true;", &dummy),
-		// Click first timelapse.
+		// Add first timelapse.
+		chromedp.WaitVisible(add_part, chromedp.ByJSPath),
+		chromedp.ActionFunc(shortSleep),
+		chromedp.Evaluate(add_part+".click(); true;", &dummy),
+		// Click new job.
 		chromedp.WaitVisible(new_job, chromedp.ByJSPath),
 		chromedp.ActionFunc(shortSleep),
 		chromedp.Evaluate(new_job+".click(); true;", &dummy),
