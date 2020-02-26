@@ -73,8 +73,7 @@ func (f *FileBrowser) GetFullPath(p string) (string, error) {
 	return b, nil
 }
 
-func (f *FileBrowser) GetTimelapse(p string) (ITimelapse, error) {
-	// TODO support for multipart timelapsees
+func (f *FileBrowser) getSingleTimelapse(p string) (*Timelapse, error) {
 	dir, name := path.Split(p)
 
 	contents, err := f.listPath(dir)
@@ -88,6 +87,25 @@ func (f *FileBrowser) GetTimelapse(p string) (ITimelapse, error) {
 		}
 	}
 	return nil, fmt.Errorf("timelapse %v not found in %v", name, dir)
+}
+
+func (f *FileBrowser) getMultiTimelapse(p string) (*MultipartTimelapse, error) {
+	t := &MultipartTimelapse{}
+	for _, part := range strings.Split(p, ",") {
+		pt, err := f.getSingleTimelapse(part)
+		if err != nil {
+			return nil, err
+		}
+		t.Parts = append(t.Parts, pt)
+	}
+	return t, nil
+}
+
+func (f *FileBrowser) GetTimelapse(p string) (ITimelapse, error) {
+	if strings.Contains(p, ",") {
+		return f.getMultiTimelapse(p)
+	}
+	return f.getSingleTimelapse(p)
 }
 
 type tkey struct {

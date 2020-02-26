@@ -13,14 +13,14 @@ import (
 
 // ITimelapse is a generic timelapse interface.
 type ITimelapse interface {
+	// TimelapseName is the human-readable name of this timelapse.
+	TimelapseName() string
+	// Path can be used for /image
+	ImagePath() string
 	GetPathForIndex(idx int) string
 	GetOutputFullPath(base string) string
 	ImageCount() int
 	View() *TimelapseView
-	// Name is the first timelapse in the sequence.
-	ImageName() string
-	// Path can be used for /image
-	ImagePath() string
 }
 
 type TimelapseView struct {
@@ -58,7 +58,7 @@ func toDuration(t ITimelapse) string {
 	return dur.Truncate(100 * time.Millisecond).String()
 }
 
-func (t *Timelapse) ImageName() string {
+func (t *Timelapse) TimelapseName() string {
 	return t.Name
 }
 
@@ -86,6 +86,9 @@ func (t *Timelapse) ImageCount() int {
 }
 
 func (t *Timelapse) GetPathForIndex(idx int) string {
+	if idx < 0 || idx >= t.Count {
+		panic("out of bounds")
+	}
 	basef := fmt.Sprintf("%s%%%02dd.%s", t.Prefix, t.NumLen, t.Ext)
 	base := fmt.Sprintf(basef, t.Start+idx)
 	return t.GetOutputFullPath(base)

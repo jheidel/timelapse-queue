@@ -75,7 +75,7 @@ class Queue extends PolymerElement {
                 <div>
                     <div class="jobname">[[item.Config.OutputName]].mp4</div>
                     <div>[[item.Config.OutputProfileName]]</div>
-                    <div>[[item.ImageName]]</div>
+                    <div>[[item.TimelapseName]]</div>
                     <div>[[item.ExpectedFrames]] images</div>
                 </div>
                 <div>

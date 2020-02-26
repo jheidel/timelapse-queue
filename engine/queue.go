@@ -32,8 +32,8 @@ type Job struct {
 
 	Timelapse filebrowse.ITimelapse
 
-	ImagePath string
-	ImageName string
+	ImagePath     string
+	TimelapseName string
 
 	Config Config
 
@@ -179,12 +179,12 @@ func (q *JobQueue) markJobDone(err error) {
 
 func (q *JobQueue) AddJob(config Config, t filebrowse.ITimelapse) {
 	j := &Job{
-		State:     StatePending,
-		Timelapse: t,
-		ImagePath: t.ImagePath(),
-		ImageName: t.ImageName(),
-		Config:    config,
-		ID:        q.jobIDgen,
+		State:         StatePending,
+		Timelapse:     t,
+		ImagePath:     t.ImagePath(),
+		TimelapseName: t.TimelapseName(),
+		Config:        config,
+		ID:            q.jobIDgen,
 	}
 	q.jobIDgen += 1
 	q.addc <- j
