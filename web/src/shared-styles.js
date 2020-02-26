@@ -45,6 +45,10 @@ $_documentContainer.innerHTML = `<dom-module id="shared-styles">
         color: gray;
         font-style: italic;
       }
+
+      [hidden] {
+        display: none !important;
+      }
     </style>
   </template>
 </dom-module>`;

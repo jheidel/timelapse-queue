@@ -25,30 +25,48 @@ class Browse extends PolymerElement {
           color: blue;
           text-transform: none;
         }
-        .timelapses paper-button {
+        .add {
           color: green;
+        }
+        .remove {
+          color: darkred;
+        }
+        .finalize {
+          color: darkblue;
         }
         .timelapse {
           padding: 5px;
           margin: 5px;
           background: #f5f5f5;
         }
+        .final {
+          padding-top: 5px;
+          padding-bottom: 5px;
+        }
       </style>
 
       <iron-ajax
           auto
           url="/filebrowser"
-          params="[[_buildParams(path)]]"
+          params="[[buildParams_(path)]]"
           handle-as="json"
           last-response="{{response}}"
           ></iron-ajax>
+      <iron-ajax
+          auto="[[parts.length]]"
+          id="timelapseajax"
+          url="/timelapse"
+          params="[[toTimelapseParams_(parts.length)]]"
+          handle-as="json"
+          last-response="{{timelapse_}}"
+          ></iron-ajax>
       <div class="card">
         <div class="circle">1</div>
-        <h1>Select a Timelapse</h1>
+        <h1>Select a Timelapse Part</h1>
         <div class="files parents">
           <template is="dom-repeat" items="[[response.Parents]]">
           <div>
-           <paper-button on-tap="_onDir">
+           <paper-button on-tap="onDir_">
              <iron-icon icon="arrow-back"></iron-icon>
              <iron-icon icon="folder"></iron-icon>
              [[item.Name]]
@@ -60,7 +78,7 @@ class Browse extends PolymerElement {
         <div class="files dirs">
           <template is="dom-repeat" items="[[response.Dirs]]">
           <div>
-           <paper-button on-tap="_onDir">
+           <paper-button on-tap="onDir_">
              <iron-icon icon="folder"></iron-icon>
              [[item.Name]]
            </paper-button>
@@ -83,7 +101,10 @@ class Browse extends PolymerElement {
              </div>
              <div>[[item.Name]]</div>
              <div><span>[[item.Count]]</span> images</div>
-            <paper-button on-tap="_onSelectTimelapse" raised>New Timelapse Job</paper-button>
+             <paper-button class="add" on-tap="onSelectTimelapse_" raised>
+               <iron-icon icon="add"></iron-icon>
+               Add
+             </paper-button>
           </div>
           </template>
           <template is="dom-if" if="[[!response.Timelapses]]">
@@ -92,25 +113,85 @@ class Browse extends PolymerElement {
           </div>
           </template>
         </div>
+      </div>
 
+      <div class="card" hidden$="[[!hasValues_(parts.length)]]">
+        <h3>Selected Timelapse Parts</h3>
+        <p>
+          A timelapse may contain multiple image sequences.  This can be used
+    to combine multiple folders.  You can either select more timelapse parts
+    above, or continue with the new timelapse job below.
+        </p>
+
+        <div class="files timelapses">
+          <template is="dom-repeat" items="[[parts]]">
+          <div class="timelapse">
+             <div>
+              <a href="/image?path=[[item.Path]]" target="_blank">
+               <img src="/image?path=[[item.Path]]&thumb=true" alt="[[item.Name]]">
+              </a>
+             </div>
+             <div>[[item.Name]]</div>
+             <div><span>[[item.Count]]</span> images</div>
+             <paper-button class="remove" on-tap="onRemoveTimelapse_" raised>
+               <iron-icon icon="remove"></iron-icon>
+               Remove
+             </paper-button>
+          </div>
+          </template>
+        </div>
+
+        <div class="final">
+             <div><b>New Job Contains</b></div>
+             <div><span>[[timelapse_.Count]]</span> images</div>
+             <div><span>[[parts.length]]</span> image sequence(s)</div>
+             <div><span>[[timelapse_.DurationString]]</span> (at 60fps)</div>
+        </div>
+
+        <div>
+          <paper-button class="finalize" on-tap="onFinalizeTimelapse_" raised>New Timelapse Job</paper-button>
+        </div>
       </div>
     `;
   }
 
-  _onDir(e) {
+  onDir_(e) {
           this.path = e.model.item.Path;
   }
 
-  _buildParams(path) {
+  buildParams_(path) {
       return {'path': path};
   }
 
-  _onSelectTimelapse(e) {
+  onSelectTimelapse_(e) {
     const timelapse = e.model.item;
-    const path = '/?path=' + timelapse.Path + '#/setup';
-   
+    this.push('parts', timelapse);
+  }
+
+  onRemoveTimelapse_(e) {
+    const timelapse = e.model.item;
+    const index = this.parts.findIndex((t) => t.Path === timelapse.Path);
+    this.splice('parts', index, 1);
+  }
+
+  onFinalizeTimelapse_(e) {
+    const path = '/?path=' + this.parts.map((p) => p.Path).join(",") + '#/setup';
+
+    // Reset internal state.
+    this.set('parts', []);
+
     window.history.pushState({}, null, path);
     window.dispatchEvent(new CustomEvent('location-changed'));
+  }
+
+  toTimelapseParams_(l) {
+    return {
+      'path': this.parts.map((p) => p.Path).join(","),
+    };
+  }
+
+  hasValues_(v) {
+    return !!v;
   }
 
   static get properties() {
@@ -120,6 +201,15 @@ class Browse extends PolymerElement {
         value: '',
       },
       response: {
+        type: Object,
+      },
+      parts: {
+        type: Array,
+        value: function() {
+          return [];
+        },
+      },
+      timelapse_: {
         type: Object,
       },
     };

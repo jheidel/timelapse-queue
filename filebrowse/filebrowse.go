@@ -298,6 +298,10 @@ func (f *FileBrowser) ServeTimelapse(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "timelapse not found", http.StatusNotFound)
 		return
 	}
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	js, err := json.Marshal(t.View())
 	if err != nil {
