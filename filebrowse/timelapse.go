@@ -94,8 +94,8 @@ func (t *Timelapse) GetPathForIndex(idx int) string {
 	return t.GetOutputFullPath(base)
 }
 
-func getImage(t ITimelapse, num int) (*image.RGBA, error) {
-	f, err := os.Open(t.GetPathForIndex(num))
+func getImage(path string) (*image.RGBA, error) {
+	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
@@ -109,6 +109,23 @@ func getImage(t ITimelapse, num int) (*image.RGBA, error) {
 	return img, nil
 }
 
+// ImagePaths produces a stream of paths for this timelapse.
+// Paths are absolute.
+// Optionally supply non-zero start & end for bounded timelapse.
+func ImagePaths(t ITimelapse, start, end, skip int) <-chan string {
+	pathc := make(chan string)
+	go func() {
+		defer close(pathc)
+		if end == 0 {
+			end = t.ImageCount() - 1
+		}
+		for i := start; i <= end; i += skip {
+			pathc <- t.GetPathForIndex(i)
+		}
+	}()
+	return pathc
+}
+
 // Images produces a stream of images for this timelapse.
 // Optionally supply non-zero start & end for bounded timelapse.
 func Images(ctx context.Context, t ITimelapse, start, end, skip int) (<-chan *image.RGBA, chan error) {
@@ -117,11 +134,8 @@ func Images(ctx context.Context, t ITimelapse, start, end, skip int) (<-chan *im
 	go func() {
 		defer close(imagec)
 		defer close(errc)
-		if end == 0 {
-			end = t.ImageCount() - 1
-		}
-		for i := start; i <= end; i += skip {
-			img, err := getImage(t, i)
+		for path := range ImagePaths(t, start, end, skip) {
+			img, err := getImage(path)
 			if err != nil {
 				errc <- err
 				return

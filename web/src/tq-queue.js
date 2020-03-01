@@ -68,13 +68,18 @@ class Queue extends PolymerElement {
         <div>
           <template is="dom-repeat" items="[[response.Queue]]">
             <div class$="queue-item queue-[[item.State]]">
-              <div>
+              <div hidden$="[[item.Config.RenameOnly]]">
                <img src="/image?path=[[item.ImagePath]]&thumb=true">
               </div>
               <div class="item-details">
-                <div>
+                <div hidden$="[[item.Config.RenameOnly]]">
                     <div class="jobname">[[item.Config.OutputName]].mp4</div>
                     <div>[[item.Config.OutputProfileName]]</div>
+                    <div>[[item.TimelapseName]]</div>
+                    <div>[[item.ExpectedFrames]] images</div>
+                </div>
+                <div hidden$="[[!item.Config.RenameOnly]]">
+                    <div class="jobname">[[item.Config.OutputName]]000000.jpg (RENAME)</div>
                     <div>[[item.TimelapseName]]</div>
                     <div>[[item.ExpectedFrames]] images</div>
                 </div>

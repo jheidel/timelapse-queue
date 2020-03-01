@@ -33,14 +33,6 @@ const (
 	frameDeadline    = 4 * time.Minute
 )
 
-type ConvertOptions struct {
-	ProfileCPU, ProfileMem bool
-	Stack                  bool
-	StackWindow            int
-	StackSkipCount         int
-	StackMode              string
-}
-
 // scanLines is bufio.ScanLines, but breaks on \r|\n.
 // FFMPEG uses carriage return without newline to implement status updates.
 func scanLines(data []byte, atEOF bool) (advance int, token []byte, err error) {
@@ -108,36 +100,11 @@ func (w *imageWriter) Write(img *image.RGBA) error {
 	return nil
 }
 
-func Convert(pctx context.Context, config Config, timelapse filebrowse.ITimelapse, progress chan<- int) error {
-	defer close(progress)
+func ConvertFFMpeg(pctx context.Context, logger *log.Logger, config Config, timelapse filebrowse.ITimelapse, progress chan<- int) error {
 	opts := config.GetConvertOptions()
-
-	profilepath := profile.ProfilePath(timelapse.GetOutputFullPath("profiles"))
-	if opts.ProfileCPU {
-		defer profile.Start(profilepath).Stop()
-	}
-	if opts.ProfileMem {
-		defer profile.Start(profile.MemProfile, profilepath).Stop()
-	}
 
 	ctx, cancelf := context.WithCancel(pctx)
 	defer cancelf()
-
-	logf, err := os.Create(timelapse.GetOutputFullPath(config.GetDebugFilename()))
-	if err != nil {
-		return err
-	}
-	defer logf.Close()
-
-	customFormatter := new(log.TextFormatter)
-	customFormatter.TimestampFormat = "2006-01-02 15:04:05"
-	customFormatter.FullTimestamp = true
-
-	logger := &log.Logger{
-		Out:       logf,
-		Formatter: customFormatter,
-		Level:     log.DebugLevel,
-	}
 
 	outp, err := config.GetOutputProfile()
 	if err != nil {

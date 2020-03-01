@@ -50,6 +50,8 @@ type baseConfig struct {
 	StackMode         string
 	FrameRate         int
 	OutputProfileName string
+
+	RenameOnly bool
 }
 
 func (f *baseConfig) GetConvertOptions() *ConvertOptions {
@@ -60,6 +62,7 @@ func (f *baseConfig) GetConvertOptions() *ConvertOptions {
 		StackMode:      f.StackMode,
 		ProfileCPU:     f.ProfileCPU,
 		ProfileMem:     f.ProfileMem,
+		RenameOnly:     f.RenameOnly,
 	}
 }
 
@@ -148,10 +151,20 @@ func (f *baseConfig) Validate(ctx context.Context, t filebrowse.ITimelapse) erro
 		return fmt.Errorf("the output file %v already exists", f.GetFilename())
 	}
 
+	if f.RenameOnly {
+		if f.Stack {
+			return fmt.Errorf("Stacking unsupported with rename")
+		}
+	}
+
 	return nil
 }
 
 func (f *baseConfig) GetFilename() string {
+	if f.RenameOnly {
+		// File extension will be added by rename converter.
+		return f.OutputName
+	}
 	return f.OutputName + ".mp4"
 }
 
