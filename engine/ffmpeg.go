@@ -116,6 +116,13 @@ func ConvertFFMpeg(pctx context.Context, logger *log.Logger, config Config, time
 	skip := config.GetSkip()
 	imagec, imerrc := filebrowse.Images(ctx, timelapse, start, end, skip)
 
+	if deg := config.GetRotate(); deg != 0 {
+		rotate := process.Rotate{
+			Degrees: deg,
+		}
+		imagec, imerrc = rotate.Process(ctx, imagec, imerrc)
+	}
+
 	cropper := process.Crop{
 		Region: config.GetRegion(),
 	}

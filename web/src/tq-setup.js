@@ -298,6 +298,16 @@ class Setup extends PolymerElement {
                             on-value-changed="onUpdateParam_"
                             label="Height"
                         ></paper-input>
+                      <span></span>
+                      <paper-input
+                            type="number"
+                            min="-180"
+                            max="180"
+                            value="[[rotate]]"
+                            data-param="rotate"
+                            on-value-changed="onUpdateParam_"
+                            label="Rotate °"
+                        ></paper-input>
                   </div>
                   <div>
                     <paper-button on-tap="onSetSize_">
@@ -465,6 +475,7 @@ class Setup extends PolymerElement {
       'Y': this.crop.y,
       'Width': this.crop.width,
       'Height': this.crop.height,
+      'Rotate': this.crop.rotate,
       'OutputName': this.filename_,
       'FrameRate': parseInt(this.fps_, 10),
       'StartFrame': this.startFrame_,
@@ -504,6 +515,7 @@ class Setup extends PolymerElement {
     this.stack_ = false;
     this.stackSkip_ = false;
     this.renameOnly_ = false;
+    this.rotate = 0;
     this.cropper.destroy();
   }
 
@@ -613,6 +625,10 @@ class Setup extends PolymerElement {
       },
       crop: {
         type: Object,
+      },
+      rotate: {
+        type: Number,
+        value: 0,
       },
       loading_: {
         type: Boolean,

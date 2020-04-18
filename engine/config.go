@@ -19,6 +19,8 @@ type Config interface {
 	GetDebugFilename() string
 	// The desired cropping region.
 	GetRegion() image.Rectangle
+	// The rotation to be applied
+	GetRotate() int
 	// Gets the start & end of the sequence.
 	GetStartEnd() (int, int)
 	// Gets the skip of the sequence.
@@ -39,6 +41,7 @@ type Config interface {
 type baseConfig struct {
 	Path                   string
 	X, Y, Width, Height    int
+	Rotate                 int
 	OutputName             string
 	StartFrame, EndFrame   int
 	Skip                   int
@@ -79,6 +82,10 @@ func (f *baseConfig) GetRegion() image.Rectangle {
 	}
 }
 
+func (f *baseConfig) GetRotate() int {
+	return f.Rotate
+}
+
 func getSampleImageBounds(pctx context.Context, t filebrowse.ITimelapse, start int) (image.Rectangle, error) {
 	ctx, cancelf := context.WithTimeout(pctx, 10*time.Second)
 	defer cancelf()
@@ -114,6 +121,11 @@ func (f *baseConfig) Validate(ctx context.Context, t filebrowse.ITimelapse) erro
 		return err
 	}
 
+	rot := f.GetRotate()
+	if rot > 180 || rot < -180 {
+		return fmt.Errorf("Rotation must be between -180 and 180 degrees")
+	}
+
 	r := f.GetRegion()
 	if r.Dx() < outp.Width || r.Dy() < outp.Height {
 		return fmt.Errorf("selected region must be at least %d x %d", outp.Width, outp.Height)
@@ -123,6 +135,7 @@ func (f *baseConfig) Validate(ctx context.Context, t filebrowse.ITimelapse) erro
 		return fmt.Errorf("failed to load sample frame: %v", err)
 	}
 
+	ir = process.SizeAfterRotate(ir, rot)
 	if !(r.Min.X >= ir.Min.X && r.Min.Y >= ir.Min.Y &&
 		r.Min.X <= ir.Max.X && r.Min.Y <= ir.Max.Y &&
 		r.Max.X >= ir.Min.X && r.Max.Y >= ir.Min.Y &&
