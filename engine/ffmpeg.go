@@ -119,12 +119,12 @@ func ConvertFFMpeg(pctx context.Context, logger *log.Logger, config Config, time
 	cropper := process.Crop{
 		Region: config.GetRegion(),
 	}
-	imagec, imerrc = cropper.Process(imagec, imerrc)
+	imagec, imerrc = cropper.Process(ctx, imagec, imerrc)
 
 	resizer := process.Resizer{
 		Size: image.Point{X: outp.Width, Y: outp.Height},
 	}
-	imagec, imerrc = resizer.Process(imagec, imerrc)
+	imagec, imerrc = resizer.Process(ctx, imagec, imerrc)
 
 	if opts.Stack {
 		stacker := process.Stacker{
@@ -132,7 +132,7 @@ func ConvertFFMpeg(pctx context.Context, logger *log.Logger, config Config, time
 			Skip:    opts.StackSkipCount,
 			Merger:  process.GetMergerByName(opts.StackMode),
 		}
-		imagec, imerrc = stacker.Process(imagec, imerrc)
+		imagec, imerrc = stacker.Process(ctx, imagec, imerrc)
 	}
 
 	// Writes errors both to the system logger and the file logger.

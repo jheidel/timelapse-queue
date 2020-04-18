@@ -140,10 +140,12 @@ func Images(ctx context.Context, t ITimelapse, start, end, skip int) (<-chan *im
 				errc <- err
 				return
 			}
-			if ctx.Err() != nil {
+			// Write to channel as long as the context is still alive.
+			select {
+			case <-ctx.Done():
 				return
+			case imagec <- img:
 			}
-			imagec <- img
 		}
 	}()
 	return imagec, errc

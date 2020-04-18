@@ -1,6 +1,7 @@
 package process
 
 import (
+	"context"
 	"image"
 
 	log "github.com/sirupsen/logrus"
@@ -80,7 +81,7 @@ func (s *Stacker) applySkipToWindow(in []int) []int {
 	return out
 }
 
-func (s *Stacker) overlapWindow(inc <-chan *image.RGBA, outc chan<- *image.RGBA) {
+func (s *Stacker) overlapWindow(ctx context.Context, inc <-chan *image.RGBA, outc chan<- *image.RGBA) {
 	buf := &Buffer{}
 	frame := 0
 	window := []int{}
@@ -94,18 +95,26 @@ func (s *Stacker) overlapWindow(inc <-chan *image.RGBA, outc chan<- *image.RGBA)
 			window = window[1:]
 		}
 
-		outc <- buf.Generate(s.applySkipToWindow(window), s.Merger)
+		select {
+		case <-ctx.Done():
+			return
+		case outc <- buf.Generate(s.applySkipToWindow(window), s.Merger):
+		}
 		frame += 1
 	}
 
 	for len(window) > 1 {
 		buf.RemoveOld(window[0])
 		window = window[1:]
-		outc <- buf.Generate(window, s.Merger)
+		select {
+		case <-ctx.Done():
+			return
+		case outc <- buf.Generate(window, s.Merger):
+		}
 	}
 }
 
-func (s *Stacker) overlapAll(inc <-chan *image.RGBA, outc chan<- *image.RGBA) {
+func (s *Stacker) overlapAll(ctx context.Context, inc <-chan *image.RGBA, outc chan<- *image.RGBA) {
 	var hist *image.RGBA
 	for img := range inc {
 		if hist == nil {
@@ -113,19 +122,22 @@ func (s *Stacker) overlapAll(inc <-chan *image.RGBA, outc chan<- *image.RGBA) {
 		} else {
 			hist = s.Merger.Blend(img, hist)
 		}
-		outc <- hist
+		select {
+		case <-ctx.Done():
+			return
+		case outc <- hist:
+		}
 	}
 }
 
-func (s *Stacker) Process(inc <-chan *image.RGBA, errc chan error) (<-chan *image.RGBA, chan error) {
+func (s *Stacker) Process(ctx context.Context, inc <-chan *image.RGBA, errc chan error) (<-chan *image.RGBA, chan error) {
 	outc := make(chan *image.RGBA)
 	go func() {
 		defer close(outc)
-
 		if s.Overlap > 0 {
-			s.overlapWindow(inc, outc)
+			s.overlapWindow(ctx, inc, outc)
 		} else {
-			s.overlapAll(inc, outc)
+			s.overlapAll(ctx, inc, outc)
 		}
 		log.Infof("stacker done")
 	}()

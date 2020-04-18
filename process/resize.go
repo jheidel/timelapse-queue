@@ -1,6 +1,7 @@
 package process
 
 import (
+	"context"
 	"fmt"
 	"image"
 
@@ -22,7 +23,7 @@ func (r *Resizer) resize(in *image.RGBA) (*image.RGBA, error) {
 	return img, nil
 }
 
-func (r *Resizer) Process(inc <-chan *image.RGBA, errc chan error) (<-chan *image.RGBA, chan error) {
+func (r *Resizer) Process(ctx context.Context, inc <-chan *image.RGBA, errc chan error) (<-chan *image.RGBA, chan error) {
 	outc := make(chan *image.RGBA)
 	go func() {
 		defer close(outc)
@@ -32,7 +33,11 @@ func (r *Resizer) Process(inc <-chan *image.RGBA, errc chan error) (<-chan *imag
 				errc <- err
 				return
 			}
-			outc <- out
+			select {
+			case <-ctx.Done():
+				return
+			case outc <- out:
+			}
 		}
 	}()
 	return outc, errc
