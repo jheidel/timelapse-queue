@@ -1,0 +1,26 @@
+language: go
+
+services:
+  - docker
+env:
+  global:
+    - IMAGE_NAME=jheidel/timelapse-queue
+    - DOCKER_USERNAME=jheidel
+    # DOCKER_PASSWORD provided by travis CI env variable
+
+script:
+  - docker build -t "$IMAGE_NAME" .
+
+after_script:
+  - docker images
+
+before_deploy:
+  - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+  - docker tag "$IMAGE_NAME" "${IMAGE_NAME}:latest"
+
+deploy:
+  provider: script
+  script: docker push "${IMAGE_NAME}:latest"
+  on:
+    branch: master
+

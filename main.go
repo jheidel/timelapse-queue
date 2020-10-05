@@ -29,6 +29,13 @@ var (
 	BuildTimestamp string
 )
 
+func maxAgeHandler(seconds int, h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Add("Cache-Control", fmt.Sprintf("max-age=%d, public, must-revalidate, proxy-revalidate", seconds))
+		h.ServeHTTP(w, r)
+	})
+}
+
 func main() {
 	flag.Parse()
 
@@ -76,8 +83,9 @@ func main() {
 		http.HandleFunc("/queue-remove", jq.ServeRemove)
 		http.HandleFunc("/profiles", engine.ServeProfiles)
 		http.Handle("/",
-			http.FileServer(
-				&assetfs.AssetFS{Asset: Asset, AssetDir: AssetDir, AssetInfo: AssetInfo, Prefix: "web/build/default"}))
+			maxAgeHandler(600,
+				http.FileServer(
+					&assetfs.AssetFS{Asset: Asset, AssetDir: AssetDir, AssetInfo: AssetInfo, Prefix: "web/build/default"})))
 		http.HandleFunc("/build", func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 			ts, err := strconv.Atoi(BuildTimestamp)

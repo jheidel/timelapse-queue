@@ -19,8 +19,12 @@ type Config interface {
 	GetDebugFilename() string
 	// The desired cropping region.
 	GetRegion() image.Rectangle
+	// The rotation to be applied
+	GetRotate() int
 	// Gets the start & end of the sequence.
 	GetStartEnd() (int, int)
+	// Gets the skip of the sequence.
+	GetSkip() int
 	// The output video FPS.
 	GetFPS() int
 
@@ -37,8 +41,10 @@ type Config interface {
 type baseConfig struct {
 	Path                   string
 	X, Y, Width, Height    int
+	Rotate                 int
 	OutputName             string
 	StartFrame, EndFrame   int
+	Skip                   int
 	ProfileCPU, ProfileMem bool
 
 	Stack             bool
@@ -47,6 +53,8 @@ type baseConfig struct {
 	StackMode         string
 	FrameRate         int
 	OutputProfileName string
+
+	RenameOnly bool
 }
 
 func (f *baseConfig) GetConvertOptions() *ConvertOptions {
@@ -57,6 +65,7 @@ func (f *baseConfig) GetConvertOptions() *ConvertOptions {
 		StackMode:      f.StackMode,
 		ProfileCPU:     f.ProfileCPU,
 		ProfileMem:     f.ProfileMem,
+		RenameOnly:     f.RenameOnly,
 	}
 }
 
@@ -73,10 +82,14 @@ func (f *baseConfig) GetRegion() image.Rectangle {
 	}
 }
 
-func getSampleImageBounds(pctx context.Context, t *filebrowse.Timelapse, start int) (image.Rectangle, error) {
+func (f *baseConfig) GetRotate() int {
+	return f.Rotate
+}
+
+func getSampleImageBounds(pctx context.Context, t filebrowse.ITimelapse, start int) (image.Rectangle, error) {
 	ctx, cancelf := context.WithTimeout(pctx, 10*time.Second)
 	defer cancelf()
-	imagec, errc := t.Images(ctx, start, 0)
+	imagec, errc := filebrowse.Images(ctx, t, start, 0, 1)
 	select {
 	case img := <-imagec:
 		return img.Rect, nil
@@ -85,24 +98,32 @@ func getSampleImageBounds(pctx context.Context, t *filebrowse.Timelapse, start i
 	}
 }
 
-func (f *baseConfig) Validate(ctx context.Context, t *filebrowse.Timelapse) error {
+func (f *baseConfig) Validate(ctx context.Context, t filebrowse.ITimelapse) error {
 	if f.OutputName == "" {
 		return fmt.Errorf("missing output filename")
 	}
 
-	if f.StartFrame < 0 || f.StartFrame >= t.Count {
+	if f.StartFrame < 0 || f.StartFrame >= t.ImageCount() {
 		return fmt.Errorf("start frame out of bounds")
 	}
-	if f.EndFrame < 0 || f.EndFrame >= t.Count {
+	if f.EndFrame < 0 || f.EndFrame >= t.ImageCount() {
 		return fmt.Errorf("end frame out of bounds")
 	}
 	if f.StartFrame >= f.EndFrame {
 		return fmt.Errorf("start frame must come before end frame")
 	}
+	if f.Skip < 0 || f.Skip >= (f.EndFrame-f.StartFrame) {
+		return fmt.Errorf("invalid skip value %d", f.Skip)
+	}
 
 	outp, err := f.GetOutputProfile()
 	if err != nil {
 		return err
+	}
+
+	rot := f.GetRotate()
+	if rot > 180 || rot < -180 {
+		return fmt.Errorf("Rotation must be between -180 and 180 degrees")
 	}
 
 	r := f.GetRegion()
@@ -114,6 +135,7 @@ func (f *baseConfig) Validate(ctx context.Context, t *filebrowse.Timelapse) erro
 		return fmt.Errorf("failed to load sample frame: %v", err)
 	}
 
+	ir = process.SizeAfterRotate(ir, rot)
 	if !(r.Min.X >= ir.Min.X && r.Min.Y >= ir.Min.Y &&
 		r.Min.X <= ir.Max.X && r.Min.Y <= ir.Max.Y &&
 		r.Max.X >= ir.Min.X && r.Max.Y >= ir.Min.Y &&
@@ -126,7 +148,7 @@ func (f *baseConfig) Validate(ctx context.Context, t *filebrowse.Timelapse) erro
 	}
 
 	if f.Stack {
-		smax := (f.EndFrame - f.StartFrame + 1)
+		smax := (f.EndFrame - f.StartFrame + 1) / f.GetSkip()
 		if f.StackWindow < 0 || f.StackWindow > smax {
 			return fmt.Errorf("stacking window out of range 0..%d", smax)
 		}
@@ -142,10 +164,20 @@ func (f *baseConfig) Validate(ctx context.Context, t *filebrowse.Timelapse) erro
 		return fmt.Errorf("the output file %v already exists", f.GetFilename())
 	}
 
+	if f.RenameOnly {
+		if f.Stack {
+			return fmt.Errorf("Stacking unsupported with rename")
+		}
+	}
+
 	return nil
 }
 
 func (f *baseConfig) GetFilename() string {
+	if f.RenameOnly {
+		// File extension will be added by rename converter.
+		return f.OutputName
+	}
 	return f.OutputName + ".mp4"
 }
 
@@ -157,6 +189,13 @@ func (f *baseConfig) GetStartEnd() (int, int) {
 	return f.StartFrame, f.EndFrame
 }
 
+func (f *baseConfig) GetSkip() int {
+	if f.Skip == 0 {
+		return 1
+	}
+	return f.Skip
+}
+
 func (f *baseConfig) GetFPS() int {
 	if f.FrameRate > 0 {
 		return f.FrameRate
@@ -166,6 +205,9 @@ func (f *baseConfig) GetFPS() int {
 
 func (f *baseConfig) GetExpectedFrames() int {
 	frames := f.EndFrame + 1 - f.StartFrame
+	if f.Skip > 1 {
+		frames = frames / f.Skip
+	}
 	if f.Stack {
 		// Stacking will add additonal frames to the output.
 		frames += f.StackWindow

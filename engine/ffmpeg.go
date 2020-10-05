@@ -2,6 +2,7 @@ package engine
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"fmt"
 	"image"
@@ -10,6 +11,7 @@ import (
 	"os/exec"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
 	"timelapse-queue/filebrowse"
@@ -31,18 +33,28 @@ const (
 	frameDeadline    = 4 * time.Minute
 )
 
-type ConvertOptions struct {
-	ProfileCPU, ProfileMem bool
-	Stack                  bool
-	StackWindow            int
-	StackSkipCount         int
-	StackMode              string
+// scanLines is bufio.ScanLines, but breaks on \r|\n.
+// FFMPEG uses carriage return without newline to implement status updates.
+func scanLines(data []byte, atEOF bool) (advance int, token []byte, err error) {
+	if atEOF && len(data) == 0 {
+		return 0, nil, nil
+	}
+	if i := bytes.IndexByte(data, '\r'); i >= 0 {
+		return i + 1, data[0:i], nil
+	}
+	if i := bytes.IndexByte(data, '\n'); i >= 0 {
+		return i + 1, data[0:i], nil
+	}
+	if atEOF {
+		return len(data), data, nil
+	}
+	return 0, nil, nil
 }
 
 // imageWriter writes RGBA images directly to FFmpeg to be used as rawvideo input.
 type imageWriter struct {
 	out    io.Writer
-	bufOut *bufio.Writer
+	bufOut *bytes.Buffer
 }
 
 func newImageWriter(w io.Writer) *imageWriter {
@@ -64,10 +76,11 @@ func (w *imageWriter) Write(img *image.RGBA) error {
 	// Need to write out one stride at a time.
 	// Each frame needs to be complete though for FFmpeg, so use an output buffer.
 	if w.bufOut == nil {
-		w.bufOut = bufio.NewWriterSize(w.out, sz)
+		w.bufOut = new(bytes.Buffer)
+		w.bufOut.Grow(sz)
 	}
-	if w.bufOut.Available() < sz {
-		return fmt.Errorf("buffer size unexpectedly too small, want %v got %v", sz, w.bufOut.Available())
+	if w.bufOut.Cap() < sz {
+		return fmt.Errorf("buffer size unexpectedly too small, want %v got %v", sz, w.bufOut.Cap())
 	}
 	// TODO(jheidel): the docs seem wrong here since this should be base on img.Rect.Min but it isn't.
 	p := 0 // pix.Buf starts at the origin
@@ -81,43 +94,17 @@ func (w *imageWriter) Write(img *image.RGBA) error {
 		}
 		p += img.Stride
 	}
-	if err := w.bufOut.Flush(); err != nil {
+	if _, err := w.bufOut.WriteTo(w.out); err != nil {
 		return err
 	}
-
 	return nil
 }
 
-func Convert(pctx context.Context, config Config, timelapse *filebrowse.Timelapse, progress chan<- int) error {
-	defer close(progress)
+func ConvertFFMpeg(pctx context.Context, logger *log.Logger, config Config, timelapse filebrowse.ITimelapse, progress chan<- int) error {
 	opts := config.GetConvertOptions()
-
-	profilepath := profile.ProfilePath(timelapse.GetOutputFullPath("profiles"))
-	if opts.ProfileCPU {
-		defer profile.Start(profilepath).Stop()
-	}
-	if opts.ProfileMem {
-		defer profile.Start(profile.MemProfile, profilepath).Stop()
-	}
 
 	ctx, cancelf := context.WithCancel(pctx)
 	defer cancelf()
-
-	logf, err := os.Create(timelapse.GetOutputFullPath(config.GetDebugFilename()))
-	if err != nil {
-		return err
-	}
-	defer logf.Close()
-
-	customFormatter := new(log.TextFormatter)
-	customFormatter.TimestampFormat = "2006-01-02 15:04:05"
-	customFormatter.FullTimestamp = true
-
-	logger := &log.Logger{
-		Out:       logf,
-		Formatter: customFormatter,
-		Level:     log.DebugLevel,
-	}
 
 	outp, err := config.GetOutputProfile()
 	if err != nil {
@@ -126,17 +113,25 @@ func Convert(pctx context.Context, config Config, timelapse *filebrowse.Timelaps
 
 	// TODO: maybe use a filter chain in config to apply this sort of logic.
 	start, end := config.GetStartEnd()
-	imagec, imerrc := timelapse.Images(ctx, start, end)
+	skip := config.GetSkip()
+	imagec, imerrc := filebrowse.Images(ctx, timelapse, start, end, skip)
+
+	if deg := config.GetRotate(); deg != 0 {
+		rotate := process.Rotate{
+			Degrees: deg,
+		}
+		imagec, imerrc = rotate.Process(ctx, imagec, imerrc)
+	}
 
 	cropper := process.Crop{
 		Region: config.GetRegion(),
 	}
-	imagec, imerrc = cropper.Process(imagec, imerrc)
+	imagec, imerrc = cropper.Process(ctx, imagec, imerrc)
 
 	resizer := process.Resizer{
 		Size: image.Point{X: outp.Width, Y: outp.Height},
 	}
-	imagec, imerrc = resizer.Process(imagec, imerrc)
+	imagec, imerrc = resizer.Process(ctx, imagec, imerrc)
 
 	if opts.Stack {
 		stacker := process.Stacker{
@@ -144,7 +139,7 @@ func Convert(pctx context.Context, config Config, timelapse *filebrowse.Timelaps
 			Skip:    opts.StackSkipCount,
 			Merger:  process.GetMergerByName(opts.StackMode),
 		}
-		imagec, imerrc = stacker.Process(imagec, imerrc)
+		imagec, imerrc = stacker.Process(ctx, imagec, imerrc)
 	}
 
 	// Writes errors both to the system logger and the file logger.
@@ -204,7 +199,12 @@ func Convert(pctx context.Context, config Config, timelapse *filebrowse.Timelaps
 	args = append(args, []string{
 		"-x264opts", "colorprim=bt709:transfer=bt709:colormatrix=bt709:fullrange=off",
 		"-s", fmt.Sprintf("%dx%d", sample.Rect.Dx(), sample.Rect.Dy()),
+
+		// Prefix output with logging level.
+		"-loglevel", "level+info",
+		// Write progress in a more parseable format to stdout.
 		"-progress", "/dev/stdout",
+
 		timelapse.GetOutputFullPath(config.GetFilename()),
 	}...)
 
@@ -214,10 +214,20 @@ func Convert(pctx context.Context, config Config, timelapse *filebrowse.Timelaps
 		return err
 	}
 	stderr := bufio.NewScanner(r)
+	stderr.Split(scanLines)
 
 	go func() {
-		for stderr.Scan() {
-			logger.Error(stderr.Text())
+		for {
+			if ok := stderr.Scan(); !ok {
+				if err := stderr.Err(); err != nil {
+					dualErrorf("Error scanning stderr: %v", err)
+				}
+				logger.Info("FFMPEG stderr channel closed.")
+				return
+			}
+			if s := strings.TrimSpace(stderr.Text()); s != "" {
+				logger.Info(s)
+			}
 		}
 	}()
 
@@ -227,9 +237,15 @@ func Convert(pctx context.Context, config Config, timelapse *filebrowse.Timelaps
 	}
 	stdout := bufio.NewScanner(r)
 	go func() {
-		for stdout.Scan() {
+		for {
+			if ok := stdout.Scan(); !ok {
+				if err := stdout.Err(); err != nil {
+					dualErrorf("Error scanning stdout: %v", err)
+				}
+				logger.Info("FFMPEG stdout channel closed.")
+				return
+			}
 			l := stdout.Text()
-			logger.Info(l)
 
 			m := progressRE.FindStringSubmatch(l)
 			if len(m) != 2 {

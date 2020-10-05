@@ -80,6 +80,9 @@ class Setup extends PolymerElement {
           justify-content: space-between;
           max-width: 900px;
         }
+        .skip-input paper-input {
+          width: 100px;
+        }
         .inputrow {
           display: flex;
           align-items: center;
@@ -122,14 +125,27 @@ class Setup extends PolymerElement {
         <p>
           <div>Input Timelapse</div>
           <div class="helptext infobox">
-             <div>[[timelapse.Path]]</div>
+             <div>[[path]]</div>
              <div>[[timelapse.Count]] frames</div>
              <div>[[timelapse.DurationString]] (at 60fps)</div>
           </div>
         </p>
 
+        <p>
+          <div class="helptext">
+            <div>If selected, the timelapse job will only rename the image sequence.</div>
+            <div>No video file will be generated.</div>
+            <div>Output image files will start at 0 and count up.</div>
+            <div>This can be used to rename in preparation for import in Photoshop.</div>
+          </div>
+          <paper-checkbox checked="{{renameOnly_}}">
+            Rename Image Sequence
+          </paper-checkbox>
+        </p>
+
         <p class="medium-input">
           <paper-input
+                  id="output-filename"
                   label="Output Filename"
                   value="{{filename_}}"
                   always-float-label
@@ -138,44 +154,49 @@ class Setup extends PolymerElement {
                   error-message="Not a valid filename"
                   autofocus
                   >
-            <span slot="suffix">.mp4</span>
+            <span slot="suffix" hidden$="[[renameOnly_]]">.mp4</span>
+            <span slot="suffix" hidden$="[[!renameOnly_]]">000000.jpg</span>
           </paper-input>
         </p>
 
-        <p>
-          <div class="helptext">
-           <div>Select the resolution of the output file.</div>
-           <div>Larger resolutions can be useful for panning and scaling effects.</div>
-          </div>
-          <paper-dropdown-menu label="Output Resolution" no-animations>
-            <paper-listbox attr-for-selected="value" selected="{{profile_}}" slot="dropdown-content">
-              <template is="dom-repeat" items="[[profiles_]]">
-                <paper-item value="[[item]]">[[item.Name]]</paper-item>
-              </template>
-            </paper-listbox>
-          </paper-dropdown-menu>
-        </p>
+        <div hidden$="[[renameOnly_]]">
+          <p>
+            <div class="helptext">
+             <div>Select the resolution of the output file.</div>
+             <div>Larger resolutions can be useful for panning and scaling effects.</div>
+            </div>
+            <paper-dropdown-menu label="Output Resolution" no-animations>
+              <paper-listbox attr-for-selected="value" selected="{{profile_}}" slot="dropdown-content">
+                <template is="dom-repeat" items="[[profiles_]]">
+                  <paper-item value="[[item]]">[[item.Name]]</paper-item>
+                </template>
+              </paper-listbox>
+            </paper-dropdown-menu>
+          </p>
+
+          <p>
+            <div class="helptext">
+             <div>The output MP4 framerate can be adjusted.</div>
+             <div>60fps produces smooth video.</div>
+             <div>30fps can be used to extend the length of the timelapse.</div>
+            </div>
+            <paper-dropdown-menu label="Output Framerate" no-animations>
+              <paper-listbox attr-for-selected="value" selected="{{fps_}}" slot="dropdown-content">
+                <paper-item value="30">30 fps</paper-item>
+                <paper-item value="60">60 fps</paper-item>
+              </paper-listbox>
+            </paper-dropdown-menu>
+          </p>
+        </div>
 
         <p>
-          <div class="helptext">
-           <div>The output MP4 framerate can be adjusted.</div>
-           <div>60fps produces smooth video.</div>
-           <div>30fps can be used to extend the length of the timelapse.</div>
-          </div>
-          <paper-dropdown-menu label="Output Framerate" no-animations>
-            <paper-listbox attr-for-selected="value" selected="{{fps_}}" slot="dropdown-content">
-              <paper-item value="30">30 fps</paper-item>
-              <paper-item value="60">60 fps</paper-item>
-            </paper-listbox>
-          </paper-dropdown-menu>
-        </p>
-
-
-        <p>
-          <div>Output Video File</div>
+          <div>Output File</div>
           <div class="helptext infobox">
-            <div>MP4 [[profile_.Width]]x[[profile_.Height]] [[fps_]] fps</div>
-            <div hidden$="[[!filename_]]">[[timelapse.ParentPath]][[filename_]].mp4</div>
+            <div hidden$="[[renameOnly_]]">MP4 [[profile_.Width]]x[[profile_.Height]] [[fps_]] fps</div>
+            <div hidden$="[[!renameOnly_]]">Image Sequence</div>
+            <div hidden$="[[!filename_]]">
+              <span>[[timelapse.OutputPath]][[filename_]]</span><span hidden$="[[renameOnly_]]">.mp4</span><span hidden$="[[!renameOnly_]]">000000.jpg</span>
+            </div>
           </div>
         </p>
 
@@ -207,14 +228,42 @@ class Setup extends PolymerElement {
         </div>
         </p>
 
+        <div hidden$="[[renameOnly_]]">
+          <p>
+            <div>
+                <paper-checkbox checked="{{skipEnabled_}}">
+                  Speed Up with Frame Skip
+                </paper-checkbox>
+            </div>
+            <div>
+              <iron-collapse opened="[[skipEnabled_]]">
+                <div class="helptext">
+                  <div>Set the skip count to speed up the timelapse.</div>
+                  <div>For example, a skip count of "2" will make the timelapse twice as fast.</div>
+                </div>
+                <div class="skip-input">
+                  <paper-input
+                        label="Skip Count"
+                        type="number"
+                        min="2"
+                        max="[[getLastFrame_(timelapse)]]"
+                        value="{{skip_}}"
+                    ></paper-input>
+                </div>
+              </iron-collapse>
+            </div>
+          </p>
+        </div>
+
         <p>
-          <div>Select Image Region</div>
+          <div hidden$="[[renameOnly_]]">Select Image Region</div>
+          <div hidden$="[[!renameOnly_]]">Image Preview</div>
           <div hidden$="[[!loading_]]">
               <paper-spinner active="[[loading_]]"></paper-spinner>
           </div>
           <div class="cropcontainer" id="container">
           </div>
-          <div class="below-crop">
+          <div class="below-crop" hidden$="[[renameOnly_]]">
                   <div class="helptext inputrow">
                       <paper-input
                             type="number"
@@ -249,6 +298,16 @@ class Setup extends PolymerElement {
                             on-value-changed="onUpdateParam_"
                             label="Height"
                         ></paper-input>
+                      <span></span>
+                      <paper-input
+                            type="number"
+                            min="-180"
+                            max="180"
+                            value="[[rotate]]"
+                            data-param="rotate"
+                            on-value-changed="onUpdateParam_"
+                            label="Rotate °"
+                        ></paper-input>
                   </div>
                   <div>
                     <paper-button on-tap="onSetSize_">
@@ -259,68 +318,70 @@ class Setup extends PolymerElement {
           </div>
         </p>
 
-        <p>
-          <div>
-                  <paper-checkbox checked="{{stack_}}">
-                    Photo Stacking
-                  </paper-checkbox>
-          </div>
-          <div>
-                  <iron-collapse opened="[[stack_]]">
-                  <div class="stack-options">
-                        <div class="stack-option">
-                          <div class="helptext">
-                            <div>The frame stack count controls how long the stacking tail is.</div>
-                            <div>At 60fps, a value of "60" will give one second of history.</div>
-                            <div>Larger values will give a longer tail, though will take longer to process.</div>
-                          </div>
-                          <paper-input
-                                class="short-input"
-                                label="Frames to Stack"
-                                type="number"
-                                min="1"
-                                max="[[timelapse.Count]]"
-                                value="{{stackWindow_}}"
-                                disabled="[[stackAll_]]"
-                                always-float-label></paper-input>
-                          <paper-checkbox checked="{{stackAll_}}">
-                            Stack All
-                          </paper-checkbox>
-                       </div>
-                       <div class="stack-option">
-                          <div class="helptext">
-                            <div>Frame skipping can be used to make the stacking effect more obvious.</div>
-                            <div>Increase to create larger gaps between stacked images.</div>
-                          </div>
-                          <paper-checkbox checked="{{skip_}}" disabled="[[stackAll_]]">
-                            Frame Skip
-                          </paper-checkbox>
-                          <paper-input
-                                class="short-input"
-                                label="Frame Skip"
-                                type="number"
-                                min="1"
-                                max="[[min_(stackWindow_, timelapse.Count)]]"
-                                value="{{skipCount_}}"
-                                disabled="[[!skip_]]"
-                                always-float-label></paper-input>
-                       </div>
-                       <div class="stack-option">
-                          <div class="helptext">
-                            <div>The blending mode can be changed to achieve different stacking effects.</div>
-                          </div>
-                          <!-- animations broken in polymer 3.0, disabled for now -->
-                          <paper-dropdown-menu label="Blending Mode" no-animations>
-                            <paper-listbox attr-for-selected="value" selected="{{stackMode_}}" slot="dropdown-content">
-                              <paper-item value="lighten">Lighten</paper-item>
-                              <paper-item value="darken">Darken</paper-item>
-                            </paper-listbox>
-                          </paper-dropdown-menu>
-                       </div>
-                  </div>
-                  </iron-collapse>
-          </div>
-        </p>
+        <div hidden$="[[renameOnly_]]">
+          <p>
+            <div>
+                    <paper-checkbox checked="{{stack_}}">
+                      Photo Stacking
+                    </paper-checkbox>
+            </div>
+            <div>
+                    <iron-collapse opened="[[stack_]]">
+                    <div class="stack-options">
+                          <div class="stack-option">
+                            <div class="helptext">
+                              <div>The frame stack count controls how long the stacking tail is.</div>
+                              <div>At 60fps, a value of "60" will give one second of history.</div>
+                              <div>Larger values will give a longer tail, though will take longer to process.</div>
+                            </div>
+                            <paper-input
+                                  class="short-input"
+                                  label="Frames to Stack"
+                                  type="number"
+                                  min="1"
+                                  max="[[timelapse.Count]]"
+                                  value="{{stackWindow_}}"
+                                  disabled="[[stackAll_]]"
+                                  always-float-label></paper-input>
+                            <paper-checkbox checked="{{stackAll_}}">
+                              Stack All
+                            </paper-checkbox>
+                         </div>
+                         <div class="stack-option">
+                            <div class="helptext">
+                              <div>Frame skipping can be used to make the stacking effect more obvious.</div>
+                              <div>Increase to create larger gaps between stacked images.</div>
+                            </div>
+                            <paper-checkbox checked="{{stackSkip_}}" disabled="[[stackAll_]]">
+                              Stack Frame Skip
+                            </paper-checkbox>
+                            <paper-input
+                                  class="short-input"
+                                  label="Frame Skip"
+                                  type="number"
+                                  min="1"
+                                  max="[[min_(stackWindow_, timelapse.Count)]]"
+                                  value="{{stackSkipCount_}}"
+                                  disabled="[[!stackSkip_]]"
+                                  always-float-label></paper-input>
+                         </div>
+                         <div class="stack-option">
+                            <div class="helptext">
+                              <div>The blending mode can be changed to achieve different stacking effects.</div>
+                            </div>
+                            <!-- animations broken in polymer 3.0, disabled for now -->
+                            <paper-dropdown-menu label="Blending Mode" no-animations>
+                              <paper-listbox attr-for-selected="value" selected="{{stackMode_}}" slot="dropdown-content">
+                                <paper-item value="lighten">Lighten</paper-item>
+                                <paper-item value="darken">Darken</paper-item>
+                              </paper-listbox>
+                            </paper-dropdown-menu>
+                         </div>
+                    </div>
+                    </iron-collapse>
+            </div>
+          </p>
+        </div>
 
         <p>
           <div>Advanced Options</div>
@@ -344,7 +405,7 @@ class Setup extends PolymerElement {
               <iron-icon icon="error"></iron-icon>
               [[error_]]
             </div>
-            <paper-button on-tap="onConvert_" raised>
+            <paper-button id="add-button" on-tap="onConvert_" raised>
                    <iron-icon icon="schedule"></iron-icon>
                   Add Timelapse Job to Queue
             </paper-button>
@@ -409,20 +470,23 @@ class Setup extends PolymerElement {
   onConvert_(e) {
     this.$.convertajax.headers={'content-type': 'application/x-www-form-urlencoded'};
     const config = {
-      'Path': this.timelapse.Path,
+      'Path': this.path,
       'X': this.crop.x,
       'Y': this.crop.y,
       'Width': this.crop.width,
       'Height': this.crop.height,
+      'Rotate': this.crop.rotate,
       'OutputName': this.filename_,
       'FrameRate': parseInt(this.fps_, 10),
       'StartFrame': this.startFrame_,
       'EndFrame': this.endFrame_,
+      'Skip': this.skipEnabled_ ? parseInt(this.skip_, 10) : 0,
       'Stack': this.stack_,
       'StackWindow': this.stackAll_ ? 0 : parseInt(this.stackWindow_, 10),
-      'StackSkipCount': this.skip_ ? parseInt(this.skipCount_, 10) : 0,
+      'StackSkipCount': this.stackSkip_ ? parseInt(this.stackSkipCount_, 10) : 0,
       'StackMode': this.stackMode_,
       'OutputProfileName': this.profile_.Name,
+      'RenameOnly': this.renameOnly_,
     };
     if (this.$.profilecpu.checked) {
       config['ProfileCPU'] = true;
@@ -447,8 +511,11 @@ class Setup extends PolymerElement {
     this.filename_ = "";
     this.startFrame_ = 0;
     this.endFrame_ = 0;
+    this.skipEnabled_ = false;
     this.stack_ = false;
-    this.skip_ = false;
+    this.stackSkip_ = false;
+    this.renameOnly_ = false;
+    this.rotate = 0;
     this.cropper.destroy();
   }
 
@@ -534,6 +601,17 @@ class Setup extends PolymerElement {
       this.cropper.setData(data);
   }
 
+  onRenameOnly_(rename) {
+    if (!this.cropper) {
+      return;
+    }
+    if (rename) {
+      this.cropper.disable();
+    } else { 
+      this.cropper.enable();
+    }
+  }
+
   static get properties() {
     return {
       path: {
@@ -547,6 +625,10 @@ class Setup extends PolymerElement {
       },
       crop: {
         type: Object,
+      },
+      rotate: {
+        type: Number,
+        value: 0,
       },
       loading_: {
         type: Boolean,
@@ -564,15 +646,23 @@ class Setup extends PolymerElement {
         type: String,
         value: "60",
       },
+      skip_: {
+        type: Number,
+        value: 2,
+      },
+      skipEnabled_: {
+        type: Boolean,
+        value: false,
+      },
       stackAll_: {
         type: Boolean,
         value: false,
       },
-      skipCount_: {
+      stackSkipCount_: {
         type: Number,
         value: 3,
       },
-      skip_: {
+      stackSkip_: {
         type: Boolean,
         value: false,
       },
@@ -605,6 +695,11 @@ class Setup extends PolymerElement {
       profile_: {
         type: Object,
         observer: 'onProfileChanged_',
+      },
+      renameOnly_: {
+        type: Boolean,
+        value: false,
+        observer: 'onRenameOnly_',
       },
     };
   }

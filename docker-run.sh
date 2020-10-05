@@ -3,7 +3,7 @@
 # This file contains one possible configuration for running the timelapse
 # container as a persistent docker daemon.
 
-TIMELAPSE_DIR=/data/share/
+TIMELAPSE_DIR=/home/jeff/
 
 docker run \
   -d \

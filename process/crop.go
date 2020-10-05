@@ -1,6 +1,7 @@
 package process
 
 import (
+	"context"
 	"fmt"
 	"image"
 )
@@ -18,7 +19,7 @@ func (c *Crop) crop(in *image.RGBA) (*image.RGBA, error) {
 	return out, nil
 }
 
-func (c *Crop) Process(inc <-chan *image.RGBA, errc chan error) (<-chan *image.RGBA, chan error) {
+func (c *Crop) Process(ctx context.Context, inc <-chan *image.RGBA, errc chan error) (<-chan *image.RGBA, chan error) {
 	outc := make(chan *image.RGBA)
 	go func() {
 		defer close(outc)
@@ -28,7 +29,11 @@ func (c *Crop) Process(inc <-chan *image.RGBA, errc chan error) (<-chan *image.R
 				errc <- err
 				return
 			}
-			outc <- out
+			select {
+			case <-ctx.Done():
+				return
+			case outc <- out:
+			}
 		}
 	}()
 	return outc, errc
