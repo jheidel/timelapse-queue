@@ -59,6 +59,7 @@ func main() {
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
+	filebrowse.WatchMountHealthy(*root)
 	fb := filebrowse.NewFileBrowser(*root)
 	ih := &filebrowse.ImageHost{fb}
 	lh := &filebrowse.LogHost{fb}
