@@ -15,7 +15,8 @@ debugfs: web/build
 	go-bindata -debug web/build/default/...
 
 go:
-	go get -d -v
+	go mod download
+	go get -d -v  # Attempt upgrade
 	go build -ldflags "-X main.BuildTimestamp=$(ts)"
 
 .PHONY: debug build
