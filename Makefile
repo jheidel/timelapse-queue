@@ -9,14 +9,14 @@ web/build:
 	cd web && $(MAKE)
 
 assetfs: web/build
-	go-bindata web/build/default/...
+	go-bindata-assetfs web/build/default/...
 
 debugfs: web/build
-	go-bindata -debug web/build/default/...
+	go-bindata-assetfs -debug web/build/default/...
 
 go:
 	go mod download
-	go get -d -v  # Attempt upgrade
+	go get -d -u -v  # Attempt upgrade
 	go build -ldflags "-X main.BuildTimestamp=$(ts)"
 
 .PHONY: debug build

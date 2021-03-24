@@ -35,10 +35,9 @@ COPY . .
 # Copy built web package from the previous stage.
 COPY --from=builder-web /web/build/ /go/src/timelapse-queue/web/build/
 
-# Install go-bindata executable
-# TODO(jheidel): This tool is deprecated and it would be a good idea to switch
-# onto a maintained go asset package.
-RUN go get -u github.com/jteeuwen/go-bindata/...
+# Install go-bindata-assetfs executable for constructing our archive.
+RUN go get github.com/go-bindata/go-bindata/...
+RUN go get github.com/elazarl/go-bindata-assetfs/...
 
 # Build the standalone executable.
 RUN make build
