@@ -17,6 +17,7 @@ import (
 	"timelapse-queue/util"
 
 	assetfs "github.com/elazarl/go-bindata-assetfs"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -83,6 +84,7 @@ func main() {
 		http.HandleFunc("/queue-cancel", jq.ServeCancel)
 		http.HandleFunc("/queue-remove", jq.ServeRemove)
 		http.HandleFunc("/profiles", engine.ServeProfiles)
+		http.Handle("/metrics", promhttp.Handler())
 		http.Handle("/",
 			maxAgeHandler(600,
 				http.FileServer(
