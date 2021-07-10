@@ -3,6 +3,8 @@
 all: deps build
 
 deps:
+	echo "DEBUG DEBUG"
+	which yarn
 	yarn install
 
 build:
