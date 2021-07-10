@@ -18,9 +18,6 @@ RUN yarn global add polymer-cli
 # Copy web source files
 COPY web/ .
 
-# DEBUG DEBUG
-RUN which yarn
-
 # Build the frontend
 RUN make
 
