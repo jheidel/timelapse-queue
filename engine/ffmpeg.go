@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -305,6 +306,9 @@ func ConvertFFMpeg(pctx context.Context, logger *log.Logger, config Config, time
 					cancelf()
 					return
 				}
+
+				// Buffered images can be enormous: force GC after each frame to avoid bloat.
+				runtime.GC()
 			}
 		}
 	}()
