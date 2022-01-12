@@ -4,7 +4,7 @@
 
 FROM alpine AS builder-web
 WORKDIR /web/
-RUN apk add --no-cache nodejs npm make
+RUN apk add --no-cache nodejs npm make git
 
 # Make sure npm is up to date
 RUN npm install -g npm
