@@ -22,8 +22,9 @@ import (
 )
 
 var (
-	port = flag.Int("port", 8080, "Port to host web frontend.")
-	root = flag.String("root", "/home/jeff", "Filesystem root.")
+	port    = flag.Int("port", 8080, "Port to host web frontend (http).")
+	portSSL = flag.Int("port_ssl", 8443, "Port to host web frontend (https). Requires cert files set in env.")
+	root    = flag.String("root", "/home/jeff", "Filesystem root.")
 
 	// Timestamp that can be set with ldflags for versioning.
 	// Expected to be empty, or unix seconds.
@@ -99,7 +100,22 @@ func main() {
 			fmt.Fprintf(w, "%s", t.Format("Jan 2, 2006 3:04 PM"))
 		})
 
-		err := http.ListenAndServe(fmt.Sprintf(":%d", *port), nil)
+		var err error
+
+		if cert, key := os.Getenv("SSL_CERT"), os.Getenv("SSL_KEY"); cert != "" && key != "" {
+			go func() {
+				// Redirect HTTP traffic to HTTPS endpoint
+				err := http.ListenAndServe(fmt.Sprintf(":%d", *port), http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					http.Redirect(w, r, "https://"+r.Host+r.RequestURI, http.StatusMovedPermanently)
+				}))
+				log.Infof("HTTP redirect server exited with status %v", err)
+			}()
+			err = http.ListenAndServeTLS(fmt.Sprintf(":%d", *portSSL), cert, key, nil)
+		} else {
+			// Fallback to serving on HTTP
+			err = http.ListenAndServe(fmt.Sprintf(":%d", *port), nil)
+		}
+
 		log.Infof("HTTP server exited with status %v", err)
 		os.Exit(1)
 	}()

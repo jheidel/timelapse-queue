@@ -15,10 +15,10 @@ require (
 	github.com/pillash/mp4util v0.0.0-20150601005705-98601ecf290a
 	github.com/pixiv/go-libjpeg v0.0.0-20190822045933-3da21a74767d
 	github.com/pkg/profile v1.6.0
-	github.com/prometheus/client_golang v1.11.0
-	github.com/prometheus/common v0.31.0 // indirect
+	github.com/prometheus/client_golang v1.12.1
+	github.com/prometheus/common v0.33.0 // indirect
 	github.com/prometheus/procfs v0.7.3 // indirect
 	github.com/sirupsen/logrus v1.8.1
-	golang.org/x/sys v0.0.0-20210927094055-39ccf1dd6fa6 // indirect
-	google.golang.org/protobuf v1.27.1 // indirect
+	golang.org/x/sys v0.0.0-20220405210540-1e041c57c461 // indirect
+	google.golang.org/protobuf v1.28.0 // indirect
 )

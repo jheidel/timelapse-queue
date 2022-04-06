@@ -63,4 +63,4 @@ RUN apk add --update tzdata
 ENV TZ=America/Los_Angeles
 
 EXPOSE 80
-CMD ["./timelapse-queue", "--port", "80", "--root", "/mnt/fsroot"]
+CMD ["./timelapse-queue", "--port", "80", "--port_ssl", "443", "--root", "/mnt/fsroot"]
