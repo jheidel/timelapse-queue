@@ -31,7 +31,7 @@ To download and run the timelapse-queue image:
 TIMELAPSE_DIR=/home/jeff/
 
 docker run \
-    -p 8080:8080 \
+    -p 8080:80 \
     --mount type=bind,source=${TIMELAPSE_DIR?},target=/mnt/fsroot \
     jheidel/timelapse-queue
 ```
