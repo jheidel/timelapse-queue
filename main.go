@@ -75,7 +75,6 @@ func main() {
 	}
 
 	go func() {
-		log.Infof("Hosting web frontend on port %d", *port)
 		http.Handle("/filebrowser", fb)
 		http.HandleFunc("/timelapse", fb.ServeTimelapse)
 		http.Handle("/image", ih)
@@ -105,14 +104,17 @@ func main() {
 		if cert, key := os.Getenv("SSL_CERT"), os.Getenv("SSL_KEY"); cert != "" && key != "" {
 			go func() {
 				// Redirect HTTP traffic to HTTPS endpoint
+				log.Infof("Hosting https redirect on port %d", *port)
 				err := http.ListenAndServe(fmt.Sprintf(":%d", *port), http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					http.Redirect(w, r, "https://"+r.Host+r.RequestURI, http.StatusMovedPermanently)
 				}))
 				log.Infof("HTTP redirect server exited with status %v", err)
 			}()
+			log.Infof("Hosting web frontend on port %d", *portSSL)
 			err = http.ListenAndServeTLS(fmt.Sprintf(":%d", *portSSL), cert, key, nil)
 		} else {
 			// Fallback to serving on HTTP
+			log.Infof("Hosting web frontend on port %d", *port)
 			err = http.ListenAndServe(fmt.Sprintf(":%d", *port), nil)
 		}
 
